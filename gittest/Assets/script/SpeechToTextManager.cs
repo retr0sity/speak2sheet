@@ -5,7 +5,7 @@ using System.IO;
 using System.Diagnostics;
 using System.Threading;
 
-// Alias UnityEngine.Debug to avoid conflict with System.Diagnostics.Debug
+// Alias UnityEngine.Debug to avoid conflict
 using Debug = UnityEngine.Debug;
 
 public class SpeechToTextManager : MonoBehaviour {
@@ -19,7 +19,6 @@ public class SpeechToTextManager : MonoBehaviour {
     public int maxDurationSec = 60;
 
     [Header("Whisper Paths")]
-    // Binary & model paths determined at runtime
     private string whisperExePath;
     private string modelBinPath;
 
@@ -28,34 +27,66 @@ public class SpeechToTextManager : MonoBehaviour {
     private string wavPath;
 
     private void Start() {
-        // Determine platform-specific binary name (using whisper-cli)
-        string exeName = Application.platform == RuntimePlatform.WindowsPlayer ||
-                         Application.platform == RuntimePlatform.WindowsEditor
-                         ? "win/whisper.exe"
-                         : "linux/whisper-cli";
-
-        // Build path to binary in StreamingAssets
-        whisperExePath = Path.Combine(Application.streamingAssetsPath, exeName);
-        if (!File.Exists(whisperExePath)) {
-            Debug.LogError($"Whisper binary not found at {whisperExePath}");
-        }
-
-        // Auto-detect a .bin model in StreamingAssets/models
-        string modelsDir = Path.Combine(Application.streamingAssetsPath, "models");
-        if (Directory.Exists(modelsDir)) {
-            string[] bins = Directory.GetFiles(modelsDir, "*.bin");
-            if (bins.Length > 0) {
-                modelBinPath = bins[0];
-            } else {
-                Debug.LogError($"No .bin model found in {modelsDir}");
-            }
-        } else {
-            Debug.LogError($"Models directory not found: {modelsDir}");
-        }
+        // Copy and prepare binary on a native filesystem
+        SetupWhisperBinary();
+        // Locate model file
+        SetupModelPath();
 
         // Hook up UI
         recordButton.onClick.AddListener(ToggleRecording);
         UpdateUI();
+    }
+
+    private void SetupWhisperBinary() {
+        // Determine expected filename
+        string fileName = (Application.platform == RuntimePlatform.WindowsPlayer ||
+                           Application.platform == RuntimePlatform.WindowsEditor)
+                           ? "whisper.exe"
+                           : "whisper-cli";
+
+        // Search StreamingAssets (and subfolders) for the binary
+        string[] matches = Directory.GetFiles(Application.streamingAssetsPath, fileName, SearchOption.AllDirectories);
+        if (matches.Length == 0) {
+            Debug.LogError($"Whisper binary '{fileName}' not found in StreamingAssets");
+            return;
+        }
+
+        string src = matches[0];
+        string dest = Path.Combine(Application.persistentDataPath, fileName);
+
+        // Copy if not already present
+        if (!File.Exists(dest)) {
+            File.Copy(src, dest, true);
+#if UNITY_STANDALONE_LINUX || UNITY_EDITOR_LINUX
+            // Ensure executable
+            try {
+                var chmod = new ProcessStartInfo {
+                    FileName = "/bin/chmod",
+                    Arguments = $"+x \"{dest}\"",
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                };
+                Process.Start(chmod).WaitForExit();
+            } catch (System.Exception e) {
+                Debug.LogError($"Failed to chmod binary: {e}");
+            }
+#endif
+        }
+        whisperExePath = dest;
+    }
+
+    private void SetupModelPath() {
+        string modelsDir = Path.Combine(Application.streamingAssetsPath, "models");
+        if (!Directory.Exists(modelsDir)) {
+            Debug.LogError($"Models directory not found: {modelsDir}");
+            return;
+        }
+        string[] bins = Directory.GetFiles(modelsDir, "*.bin", SearchOption.AllDirectories);
+        if (bins.Length == 0) {
+            Debug.LogError($"No .bin model found in {modelsDir}");
+            return;
+        }
+        modelBinPath = bins[0];
     }
 
     private void ToggleRecording() {
@@ -79,22 +110,24 @@ public class SpeechToTextManager : MonoBehaviour {
         int pos = Microphone.GetPosition(null);
         Microphone.End(null);
 
-        // Trim to actual recorded length
         float[] samples = new float[pos * clip.channels];
         clip.GetData(samples, 0);
         AudioClip trimmed = AudioClip.Create("Trimmed", pos, clip.channels, sampleRate, false);
         trimmed.SetData(samples, 0);
 
-        // Save WAV to persistent data
         wavPath = Path.Combine(Application.persistentDataPath, "recording.wav");
         SaveWav.Save(wavPath, trimmed);
 
-        // Launch transcription
         RunWhisperTranscription(wavPath);
     }
 
     private void RunWhisperTranscription(string filePath) {
-        ProcessStartInfo psi = new ProcessStartInfo {
+        if (string.IsNullOrEmpty(whisperExePath) || string.IsNullOrEmpty(modelBinPath)) {
+            Debug.LogError("Whisper binary or model path not set");
+            return;
+        }
+
+        var psi = new ProcessStartInfo {
             FileName               = whisperExePath,
             Arguments              = $"-m \"{modelBinPath}\" -f \"{filePath}\"",
             RedirectStandardOutput = true,
@@ -105,16 +138,12 @@ public class SpeechToTextManager : MonoBehaviour {
 
         new Thread(() => {
             try {
-                Process proc = Process.Start(psi);
+                var proc = Process.Start(psi);
                 string stdout = proc.StandardOutput.ReadToEnd();
                 string stderr = proc.StandardError.ReadToEnd();
                 proc.WaitForExit();
-                string output = stdout + stderr;
-                Debug.Log($"[Whisper] {output}");
-                // Optionally update UI on main thread:
-                // UnityMainThreadDispatcher.Instance().Enqueue(() => statusText.text = output);
-            }
-            catch (System.Exception e) {
+                Debug.Log($"[Whisper] {stdout}{stderr}");
+            } catch (System.Exception e) {
                 Debug.LogError($"Whisper failed: {e}");
             }
         }).Start();
