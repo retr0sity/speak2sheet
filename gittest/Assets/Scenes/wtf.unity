@@ -237,12 +237,12 @@ MonoBehaviour:
   m_GameObject: {fileID: 691229121}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d8c4e85d79fff3d4798485b21c951c11, type: 3}
+  m_Script: {fileID: 11500000, guid: e8e14201bcc73d44eb6461c8e721778b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  recordButton: {fileID: 1701665494}
-  recordButtonText: {fileID: 1359040449}
-  statusText: {fileID: 1374180080}
+  recordButton: {fileID: 0}
+  recordButtonText: {fileID: 0}
+  statusText: {fileID: 0}
   sampleRate: 16000
   maxDurationSec: 60
 --- !u!4 &691229123

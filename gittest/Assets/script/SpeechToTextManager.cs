@@ -31,8 +31,8 @@ public class SpeechToTextManager : MonoBehaviour {
         // Determine platform-specific binary name (using whisper-cli)
         string exeName = Application.platform == RuntimePlatform.WindowsPlayer ||
                          Application.platform == RuntimePlatform.WindowsEditor
-                         ? "whisper.exe"
-                         : "whisper-cli";
+                         ? "win/whisper.exe"
+                         : "linux/whisper-cli";
 
         // Build path to binary in StreamingAssets
         whisperExePath = Path.Combine(Application.streamingAssetsPath, exeName);
