@@ -78,3 +78,5 @@ crashlytics-build.properties
 
 #ignore Model
 #Assets/StreamingAssets/models/ggml-large-v3-turbo-q8_0.bin
+
+.idea/

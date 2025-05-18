@@ -1,4 +1,14 @@
 {
+  "scopedRegistries": [
+    {
+      "name": "openupm",
+      "url": "https://package.openupm.com",
+      "scopes": [
+        "com.github.exceldatareader.exceldatareader"
+      ]
+    }
+  ],
+
   "dependencies": {
     "com.unity.collab-proxy": "2.7.1",
     "com.unity.feature.2d": "2.0.1",
@@ -13,6 +23,7 @@
     "com.unity.toolchain.win-x86_64-linux-x86_64": "2.0.10",
     "com.unity.ugui": "2.0.0",
     "com.unity.visualscripting": "1.9.5",
+    "com.yasirkula.simplefilebrowser": "https://github.com/yasirkula/UnitySimpleFileBrowser.git",
     "com.unity.modules.accessibility": "1.0.0",
     "com.unity.modules.ai": "1.0.0",
     "com.unity.modules.androidjni": "1.0.0",
