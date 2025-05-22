@@ -25,8 +25,15 @@ public class SpeechToTextManager : MonoBehaviour
     [SerializeField] private int sampleRate     = 16000;
     [SerializeField] private int maxDurationSec = 60;
 
+    [Header("Whisper Paths & Settings")]
+    [SerializeField] [Tooltip("The .gbnf file placed under StreamingAssets/models")]
+    private string grammarFileName = "grades.gbnf";
+    [SerializeField] [Range(0, 200)]
+    private int grammarPenalty = 100;
+
     private string whisperExePath;
     private string modelBinPath;
+    private string grammarFilePath;
 
     private bool isRecording;
     private AudioClip clip;
@@ -35,6 +42,7 @@ public class SpeechToTextManager : MonoBehaviour
     private void Awake()
     {
         InitializeWhisperPaths();
+        InitializeGrammarFile();
     }
 
     private void Start()
@@ -45,6 +53,7 @@ public class SpeechToTextManager : MonoBehaviour
 
     private void InitializeWhisperPaths()
     {
+        // existing logic…
         string fileName = Application.platform == RuntimePlatform.WindowsPlayer ||
                           Application.platform == RuntimePlatform.WindowsEditor
                           ? "whisper.exe"
@@ -64,6 +73,7 @@ public class SpeechToTextManager : MonoBehaviour
         {
             File.Copy(src, dest, overwrite: true);
     #if UNITY_STANDALONE_LINUX || UNITY_EDITOR_LINUX
+            // make executable…
             try
             {
                 var chmod = new ProcessStartInfo
@@ -97,6 +107,22 @@ public class SpeechToTextManager : MonoBehaviour
             return;
         }
         modelBinPath = bins[0];
+    }
+
+    private void InitializeGrammarFile()
+    {
+        // Copy grades.gbnf from StreamingAssets to persistentDataPath
+        string src = Path.Combine(Application.streamingAssetsPath, "models", grammarFileName);
+        if (!File.Exists(src))
+        {
+            Debug.LogError($"[Whisper] Grammar file not found: {src}");
+            return;
+        }
+        grammarFilePath = Path.Combine(Application.persistentDataPath, grammarFileName);
+        if (!File.Exists(grammarFilePath))
+        {
+            File.Copy(src, grammarFilePath, overwrite: true);
+        }
     }
 
     private void OnRecordButtonClicked()
@@ -165,6 +191,7 @@ public class SpeechToTextManager : MonoBehaviour
 
     private static byte[] ConvertSamplesToWav(float[] samples, int channels, int sampleRate)
     {
+        // existing WAV conversion…
         using (var ms = new MemoryStream())
         using (var bw = new BinaryWriter(ms, Encoding.UTF8))
         {
@@ -235,9 +262,14 @@ public class SpeechToTextManager : MonoBehaviour
     {
         return Task.Run(() =>
         {
-            string modelArg = modelBinPath.Replace("\\", "/");
-            string fileArg  = filePath.Replace("\\", "/");
-            string args     = $"-m \"{modelArg}\" -f \"{fileArg}\" -l el";
+            string modelArg   = modelBinPath.Replace("\\", "/");
+            string fileArg    = filePath.Replace("\\", "/");
+            string grammarArg = grammarFilePath != null
+                ? $" --grammar \"{grammarFilePath.Replace("\\", "/")}\" --grammar-penalty {grammarPenalty}"
+                : "";
+
+            // add the grammar args
+            string args = $"-m \"{modelArg}\"{grammarArg} -f \"{fileArg}\" -l el";
 
             Debug.Log($"[Whisper] Executing: {whisperExePath} {args}");
 
@@ -279,3 +311,5 @@ public class SpeechToTextManager : MonoBehaviour
         statusText.text = $"Error: {message}";
     }
 }
+// Note: This script assumes that the Whisper binary and model files are correctly set up in the StreamingAssets folder.
+// Make sure to test the script in the Unity Editor and on the target platform to ensure compatibility.
