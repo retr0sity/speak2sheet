@@ -10,9 +10,9 @@ using ExcelDataReader;
 public class ExcelLoader : MonoBehaviour
 {
     [Header("UI References")]
-    [SerializeField] private Button      openExcelButton;
+    [SerializeField] private Button openExcelButton;
     [SerializeField] private RectTransform gridContent;
-    [SerializeField] private GameObject  cellPrefab; // A prefab with a TextMeshProUGUI component
+    [SerializeField] private GameObject cellPrefab; // A prefab with a TextMeshProUGUI component
 
     private void Awake()
     {
@@ -28,7 +28,7 @@ public class ExcelLoader : MonoBehaviour
         // Open file dialog with previously set filters
         FileBrowser.ShowLoadDialog(
             paths => LoadAndDisplayExcel(paths[0]),        // onSuccess
-            ()      => Debug.Log("Excel load canceled"),  // onCancel
+            () => Debug.Log("Excel load canceled"),  // onCancel
             FileBrowser.PickMode.Files,                     // pick mode
             false,                                          // multiselect disabled
             null,                                           // initial path
@@ -70,22 +70,30 @@ public class ExcelLoader : MonoBehaviour
         // Clear existing cells
         foreach (Transform child in gridContent) Destroy(child.gameObject);
 
-        int rows    = table.Rows.Count;
+        int rows = table.Rows.Count;
         int columns = table.Columns.Count;
 
-        // Optionally adjust GridLayoutGroup on gridContent for these dimensions
+        // Define which columns to show
+        int[] desiredCols = { 0, 1, 6, 7 };
+        int visibleCols = desiredCols.Length;
+
+        // Re-configure your GridLayoutGroup to only have as many columns as you’re displaying
         var grid = gridContent.GetComponent<GridLayoutGroup>();
         if (grid != null)
         {
             grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
-            grid.constraintCount = columns;
+            grid.constraintCount = visibleCols;
         }
 
-        // Instantiate cells
-        for (int r = 0; r < rows; r++)
+        // Loop through each row, and for each row only loop through your desired column indices
+        for (int r = 1; r < rows; r++)
         {
-            for (int c = 0; c < columns; c++)
+            foreach (int c in desiredCols)
             {
+                // guard against out-of-bounds if your table has fewer columns
+                if (c < 0 || c >= columns)
+                    continue;
+
                 var cell = Instantiate(cellPrefab, gridContent);
                 var text = cell.GetComponent<TMP_Text>();
                 if (text != null)
@@ -93,6 +101,10 @@ public class ExcelLoader : MonoBehaviour
             }
         }
 
-        Debug.Log($"Displayed {rows}x{columns} grid from Excel.");
+        Debug.Log($"Displayed {rows * visibleCols} cells from columns [{string.Join(",", desiredCols)}].");
+    }
+    private void OnDestroy()
+    {
+        openExcelButton.onClick.RemoveListener(ShowFileDialog);
     }
 }
