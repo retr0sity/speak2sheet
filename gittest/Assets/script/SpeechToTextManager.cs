@@ -1,3 +1,4 @@
+// SpeechToTextManager.cs
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
@@ -9,27 +10,26 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Text.RegularExpressions;
-
-// Alias UnityEngine.Debug so we can still call System.Diagnostics
 using Debug = UnityEngine.Debug;
 
 public class SpeechToTextManager : MonoBehaviour
 {
     [Header("UI References")]
-    [SerializeField] private Button   recordButton;
+    [SerializeField] private Button recordButton;
     [SerializeField] private TMP_Text recordButtonText;
     [SerializeField] private TMP_Text statusText;
     [SerializeField] private TMP_Text transcriptText;
 
     [Header("Recording Settings")]
-    [SerializeField] private int sampleRate     = 16000;
+    [SerializeField] private int sampleRate = 16000;
     [SerializeField] private int maxDurationSec = 60;
 
     [Header("Whisper Paths & Settings")]
-    [SerializeField] [Tooltip("The .gbnf file placed under StreamingAssets/models")]
-    private string grammarFileName = "grades.gbnf";
-    [SerializeField] [Range(0, 200)]
-    private int grammarPenalty = 100;
+    [SerializeField] private string grammarFileName = "grades.gbnf";
+    [SerializeField] [Range(0, 200)] private int grammarPenalty = 100;
+
+    [Header("Excel Integration")]
+    [SerializeField] private ExcelLoader excelLoader;
 
     private string whisperExePath;
     private string modelBinPath;
@@ -53,11 +53,9 @@ public class SpeechToTextManager : MonoBehaviour
 
     private void InitializeWhisperPaths()
     {
-        // existing logic…
-        string fileName = Application.platform == RuntimePlatform.WindowsPlayer ||
-                          Application.platform == RuntimePlatform.WindowsEditor
-                          ? "whisper.exe"
-                          : "whisper-cli";
+        string fileName = (Application.platform == RuntimePlatform.WindowsPlayer || Application.platform == RuntimePlatform.WindowsEditor)
+            ? "whisper.exe"
+            : "whisper-cli";
 
         var matches = Directory.GetFiles(Application.streamingAssetsPath, fileName, SearchOption.AllDirectories);
         if (matches.Length == 0)
@@ -66,22 +64,20 @@ public class SpeechToTextManager : MonoBehaviour
             return;
         }
 
-        string src  = matches[0];
+        string src = matches[0];
         string dest = Path.Combine(Application.persistentDataPath, fileName);
-
         if (!File.Exists(dest))
         {
-            File.Copy(src, dest, overwrite: true);
-    #if UNITY_STANDALONE_LINUX || UNITY_EDITOR_LINUX
-            // make executable…
+            File.Copy(src, dest, true);
+#if UNITY_STANDALONE_LINUX || UNITY_EDITOR_LINUX
             try
             {
                 var chmod = new ProcessStartInfo
                 {
-                    FileName        = "/bin/chmod",
-                    Arguments       = $"+x \"{dest}\"",
+                    FileName = "/bin/chmod",
+                    Arguments = $"+x \"{dest}\"",
                     UseShellExecute = false,
-                    CreateNoWindow  = true
+                    CreateNoWindow = true
                 };
                 Process.Start(chmod).WaitForExit();
             }
@@ -89,7 +85,7 @@ public class SpeechToTextManager : MonoBehaviour
             {
                 Debug.LogError($"[Whisper] chmod failed: {e}");
             }
-    #endif
+#endif
         }
         whisperExePath = dest;
 
@@ -111,7 +107,6 @@ public class SpeechToTextManager : MonoBehaviour
 
     private void InitializeGrammarFile()
     {
-        // Copy grades.gbnf from StreamingAssets to persistentDataPath
         string src = Path.Combine(Application.streamingAssetsPath, "models", grammarFileName);
         if (!File.Exists(src))
         {
@@ -120,24 +115,21 @@ public class SpeechToTextManager : MonoBehaviour
         }
         grammarFilePath = Path.Combine(Application.persistentDataPath, grammarFileName);
         if (!File.Exists(grammarFilePath))
-        {
-            File.Copy(src, grammarFilePath, overwrite: true);
-        }
-    }
-
-    private void OnRecordButtonClicked()
-    {
-        if (isRecording) StopRecording();
-        else             StartRecording();
-
-        isRecording = !isRecording;
-        UpdateUI();
+            File.Copy(src, grammarFilePath, true);
     }
 
     private void UpdateUI()
     {
         recordButtonText.text = isRecording ? "Stop Recording" : "Start Recording";
-        statusText.text       = isRecording ? "Listening..."    : "Idle";
+        statusText.text = isRecording ? "Listening..." : "Idle";
+    }
+
+    private void OnRecordButtonClicked()
+    {
+        if (isRecording) StopRecording();
+        else StartRecording();
+        isRecording = !isRecording;
+        UpdateUI();
     }
 
     private void StartRecording()
@@ -163,45 +155,40 @@ public class SpeechToTextManager : MonoBehaviour
 
         float[] raw = new float[pos * clip.channels];
         clip.GetData(raw, 0);
-        float[] monoSamples = raw;
+        float[] mono = raw;
         if (clip.channels > 1)
         {
-            monoSamples = new float[pos];
+            mono = new float[pos];
             for (int i = 0; i < pos; i++)
             {
-                float sum = 0f;
+                float sum = 0;
                 for (int ch = 0; ch < clip.channels; ch++)
                     sum += raw[i * clip.channels + ch];
-                monoSamples[i] = sum / clip.channels;
+                mono[i] = sum / clip.channels;
             }
         }
 
         string wavPath = Path.Combine(Application.persistentDataPath, "recording.wav");
-        statusText.text = "Saving audio…";
-
-        Task.Run(() => WriteWavFile(wavPath, monoSamples, 1, sampleRate))
+        statusText.text = "Saving audio...";
+        Task.Run(() => WriteWavFile(wavPath, mono, 1, sampleRate))
             .ContinueWith(_ => _ = TranscribeAsync(wavPath), TaskScheduler.FromCurrentSynchronizationContext());
     }
 
     private static void WriteWavFile(string filepath, float[] samples, int channels, int sampleRate)
     {
-        byte[] wavBytes = ConvertSamplesToWav(samples, channels, sampleRate);
-        File.WriteAllBytes(filepath, wavBytes);
+        byte[] bytes = ConvertSamplesToWav(samples, channels, sampleRate);
+        File.WriteAllBytes(filepath, bytes);
     }
 
     private static byte[] ConvertSamplesToWav(float[] samples, int channels, int sampleRate)
     {
-        // existing WAV conversion…
         using (var ms = new MemoryStream())
         using (var bw = new BinaryWriter(ms, Encoding.UTF8))
         {
-            int sampleCount = samples.Length;
-            int byteCount   = sampleCount * 2;
-
+            int dataSize = samples.Length * 2;
             bw.Write(Encoding.ASCII.GetBytes("RIFF"));
-            bw.Write(36 + byteCount);
+            bw.Write(36 + dataSize);
             bw.Write(Encoding.ASCII.GetBytes("WAVE"));
-
             bw.Write(Encoding.ASCII.GetBytes("fmt "));
             bw.Write(16);
             bw.Write((short)1);
@@ -210,17 +197,13 @@ public class SpeechToTextManager : MonoBehaviour
             bw.Write(sampleRate * channels * 2);
             bw.Write((short)(channels * 2));
             bw.Write((short)16);
-
             bw.Write(Encoding.ASCII.GetBytes("data"));
-            bw.Write(byteCount);
-
+            bw.Write(dataSize);
             foreach (var f in samples)
             {
-                float clamped = Math.Max(-1f, Math.Min(1f, f));
-                short intData = (short)(clamped * short.MaxValue);
-                bw.Write(intData);
+                short v = (short)(Mathf.Clamp(f, -1f, 1f) * short.MaxValue);
+                bw.Write(v);
             }
-
             bw.Flush();
             return ms.ToArray();
         }
@@ -230,23 +213,21 @@ public class SpeechToTextManager : MonoBehaviour
     {
         cts?.Cancel();
         cts = new CancellationTokenSource();
-        statusText.text = "Transcribing…";
+        statusText.text = "Transcribing...";
         try
         {
             string output = await RunWhisperProcessAsync(wavPath, cts.Token);
-            var transcriptLines = new List<string>();
-            foreach (var line in output.Split(new[] {'\r','\n'}, StringSplitOptions.RemoveEmptyEntries))
+            var lines = new List<string>();
+            foreach (string line in output.Split(new[] {'\r','\n'}, StringSplitOptions.RemoveEmptyEntries))
             {
-                // Match timestamped transcript lines
-                var match = Regex.Match(line, @"^\[\d{2}:\d{2}:\d{2}\.\d+\s*-->\s*\d{2}:\d{2}:\d{2}\.\d+\]\s*(.+)$");
-                if (match.Success)
-                    transcriptLines.Add(match.Groups[1].Value.Trim());
+                var m = Regex.Match(line, @"^\[\d{2}:\d{2}:\d{2}\.\d+\s*-->\s*\d{2}:\d{2}:\d{2}\.\d+\]\s*(.+)$");
+                if (m.Success) lines.Add(m.Groups[1].Value.Trim());
             }
-            string clean = string.Join("\n", transcriptLines);
-
+            string clean = string.Join(" ", lines);
             transcriptText.text = clean;
-            statusText.text     = "Done";
-            Debug.Log($"[Whisper Transcript] {clean}");
+            statusText.text = "Done";
+            Debug.Log($"[Whisper] {clean}");
+            ProcessTranscript(clean);
         }
         catch (OperationCanceledException)
         {
@@ -262,33 +243,29 @@ public class SpeechToTextManager : MonoBehaviour
     {
         return Task.Run(() =>
         {
-            string modelArg   = modelBinPath.Replace("\\", "/");
-            string fileArg    = filePath.Replace("\\", "/");
+            string modelArg = modelBinPath.Replace("\\", "/");
+            string fileArg = filePath.Replace("\\", "/");
             string grammarArg = grammarFilePath != null
                 ? $" --grammar \"{grammarFilePath.Replace("\\", "/")}\" --grammar-penalty {grammarPenalty}"
-                : "";
-
-            // add the grammar args
+                : string.Empty;
             string args = $"-m \"{modelArg}\"{grammarArg} -f \"{fileArg}\" -l el";
-
             Debug.Log($"[Whisper] Executing: {whisperExePath} {args}");
-
             var psi = new ProcessStartInfo
             {
-                FileName               = whisperExePath,
-                Arguments              = args,
+                FileName = whisperExePath,
+                Arguments = args,
                 RedirectStandardOutput = true,
-                RedirectStandardError  = true,
-                UseShellExecute        = false,
-                CreateNoWindow         = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true,
                 StandardOutputEncoding = Encoding.UTF8,
-                StandardErrorEncoding  = Encoding.UTF8
+                StandardErrorEncoding = Encoding.UTF8
             };
-            var builder = new StringBuilder();
+            var sb = new StringBuilder();
             using (var proc = new Process { StartInfo = psi, EnableRaisingEvents = true })
             {
-                proc.OutputDataReceived += (s, e) => { if (!string.IsNullOrEmpty(e.Data)) lock(builder) builder.AppendLine(e.Data); };
-                proc.ErrorDataReceived  += (s, e) => { if (!string.IsNullOrEmpty(e.Data)) lock(builder) builder.AppendLine(e.Data); };
+                proc.OutputDataReceived += (s, e) => { if (!string.IsNullOrEmpty(e.Data)) lock (sb) sb.AppendLine(e.Data); };
+                proc.ErrorDataReceived += (s, e) => { if (!string.IsNullOrEmpty(e.Data)) lock (sb) sb.AppendLine(e.Data); };
                 proc.Start();
                 proc.BeginOutputReadLine();
                 proc.BeginErrorReadLine();
@@ -300,9 +277,30 @@ public class SpeechToTextManager : MonoBehaviour
                         token.ThrowIfCancellationRequested();
                     }
                 }
-                return builder.ToString();
+                return sb.ToString();
             }
         }, token);
+    }
+
+    /// <summary>
+    /// Parses commands of the form "<d1> <d2> <d3> <d4> βαθμός <grade>".
+    /// Uses the 4-digit ID to locate the row in column 0, then updates column 7.
+    /// </summary>
+    private void ProcessTranscript(string transcript)
+    {
+        var match = Regex.Match(transcript, @"\b(\d)\s+(\d)\s+(\d)\s+(\d)\s+βαθμός\s+(\d+)", RegexOptions.IgnoreCase);
+        if (!match.Success) return;
+        string id = match.Groups[1].Value + match.Groups[2].Value + match.Groups[3].Value + match.Groups[4].Value;
+        string grade = match.Groups[5].Value;
+        int rowIndex = excelLoader.FindRowById(id);
+        if (rowIndex < 0)
+        {
+            Debug.LogError($"ID '{id}' not found.");
+            return;
+        }
+        // Column 7 is index 6
+        excelLoader.UpdateCell(rowIndex, 6, grade);
+        Debug.Log($"Set grade for ID {id} to {grade}.");
     }
 
     private void ShowError(string message)
@@ -311,5 +309,3 @@ public class SpeechToTextManager : MonoBehaviour
         statusText.text = $"Error: {message}";
     }
 }
-// Note: This script assumes that the Whisper binary and model files are correctly set up in the StreamingAssets folder.
-// Make sure to test the script in the Unity Editor and on the target platform to ensure compatibility.
