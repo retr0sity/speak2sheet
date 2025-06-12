@@ -530,7 +530,7 @@ MonoBehaviour:
   sampleRate: 16000
   maxDurationSec: 60
   grammarFileName: grades.gbnf
-  grammarPenalty: 100
+  grammarPenalty: 0
   excelLoader: {fileID: 2090797578}
 --- !u!4 &691229123
 Transform:

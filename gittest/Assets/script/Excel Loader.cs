@@ -23,6 +23,8 @@ public class ExcelLoader : MonoBehaviour
     private ISheet sheet;
     private DataTable currentTable;
 
+    public bool IsLoaded => sheet != null && currentTable != null;
+
     private void Awake()
     {
         FileBrowser.SetFilters(true, new FileBrowser.Filter("Excel Files", ".xls", ".xlsx"));
@@ -49,7 +51,6 @@ public class ExcelLoader : MonoBehaviour
         try
         {
             currentFilePath = filePath;
-            // Read into DataTable (for display and ID lookup)
             using (var stream = File.Open(filePath, FileMode.Open, FileAccess.Read))
             using (var reader = ExcelReaderFactory.CreateReader(stream))
             {
@@ -68,11 +69,8 @@ public class ExcelLoader : MonoBehaviour
                 }
             }
 
-            // Open with NPOI for write support
             using (var fs = File.Open(filePath, FileMode.Open, FileAccess.Read))
-            {
                 workbook = WorkbookFactory.Create(fs);
-            }
             sheet = workbook.GetSheetAt(0);
 
             PopulateGrid(currentTable);
@@ -109,27 +107,22 @@ public class ExcelLoader : MonoBehaviour
                     text.text = table.Rows[r][c]?.ToString();
             }
         }
-
-        Debug.Log($"Displayed {rows * visibleCols} cells from columns [{string.Join(",", desiredCols)}].");
     }
 
-    /// <summary>
-    /// Finds the zero-based row index in the DataTable matching the given ID in a specified column (default col 0).
-    /// </summary>
     public int FindRowById(string id, int idColumnIndex = 0)
+{
+    if (currentTable == null) return -1;
+    for (int i = 1; i < currentTable.Rows.Count; i++)
     {
-        if (currentTable == null) return -1;
-        for (int i = 1; i < currentTable.Rows.Count; i++)
-        {
-            var cellVal = currentTable.Rows[i][idColumnIndex]?.ToString();
-            if (cellVal == id) return i;
-        }
-        return -1;
+        var cellValue = currentTable.Rows[i][idColumnIndex]?.ToString() ?? "";
+        // match if the recorded ID ends with the spoken 4-digit id
+        if (cellValue.EndsWith(id, StringComparison.Ordinal))
+            return i;
     }
+    return -1;
+}
 
-    /// <summary>
-    /// Updates a specific cell in the loaded workbook, saves, and refreshes the display.
-    /// </summary>
+
     public void UpdateCell(int rowIndex, int colIndex, string newValue)
     {
         if (sheet == null || workbook == null || string.IsNullOrEmpty(currentFilePath))
@@ -145,8 +138,12 @@ public class ExcelLoader : MonoBehaviour
         if (currentTable != null && rowIndex < currentTable.Rows.Count && colIndex < currentTable.Columns.Count)
             currentTable.Rows[rowIndex][colIndex] = newValue;
 
-        using (var fs = File.Open(currentFilePath, FileMode.Open, FileAccess.Write))
+        // Option A: Truncate & overwrite
+        using (var fs = new FileStream(currentFilePath, FileMode.Create, FileAccess.Write))
+        {
             workbook.Write(fs);
+        }
+
 
         PopulateGrid(currentTable);
         Debug.Log($"Cell updated at row {rowIndex + 1}, col {colIndex + 1} => {newValue}");

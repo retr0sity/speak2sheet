@@ -11,6 +11,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Text.RegularExpressions;
 using Debug = UnityEngine.Debug;
+using System.Linq;
+using System.Globalization;
+using System.Text.RegularExpressions;
 
 public class SpeechToTextManager : MonoBehaviour
 {
@@ -282,24 +285,114 @@ public class SpeechToTextManager : MonoBehaviour
         }, token);
     }
 
-    /// <summary>
-    /// Parses commands of the form "<d1> <d2> <d3> <d4> βαθμός <grade>".
-    /// Uses the 4-digit ID to locate the row in column 0, then updates column 7.
-    /// </summary>
+     private static readonly Dictionary<string, string> NumberMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+    {
+        {"0","0"}, {"μηδέν","0"},
+        {"1","1"}, {"ένα","1"},
+        {"2","2"}, {"δύο","2"},
+        {"3","3"}, {"τρία","3"},
+        {"4","4"}, {"τέσσερα","4"}, {"τεσσερα","4"},
+        {"5","5"}, {"πέντε","5"}, {"πεντε","5"},
+        {"6","6"}, {"έξι","6"}, {"εξι","6"},
+        {"7","7"}, {"εφτά","7"}, {"επτά","7"},
+        {"8","8"}, {"οκτώ","8"}, {"οκτω","8"},
+        {"9","9"}, {"εννέα","9"}, {"εννεα","9"},
+        {"10","10"}, {"δέκα","10"}, {"δεκα","10"},
+        {"11","11"}, {"έντεκα","11"}, {"εντεκα","11"},
+        {"12","12"}, {"δώδεκα","12"}, {"δουδεκα","12"},
+        {"13","13"}, {"δεκατρία","13"}, {"δεκατρια","13"},
+        {"14","14"}, {"δεκατέσσερα","14"}, {"δεκατεσσερα","14"},
+        {"15","15"}, {"δεκαπέντε","15"}, {"δεκαπεντε","15"},
+        {"16","16"}, {"δεκαέξι","16"}, {"δεκαεξι","16"},
+        {"17","17"}, {"δεκαεπτά","17"}, {"δεκαεφτα","17"},
+        {"18","18"}, {"δεκαοκτώ","18"}, {"δεκαοκτω","18"},
+        {"19","19"}, {"δεκαεννιά","19"}, {"δεκαεννια","19"},
+        {"20","20"}, {"είκοσι","20"}, {"εικοσι","20"},
+        {"30","30"}, {"τριάντα","30"}, {"τριαντα","30"},
+        {"40","40"}, {"σαράντα","40"}, {"σαραντα","40"},
+        {"50","50"}, {"πενήντα","50"}, {"πενηντα","50"},
+        {"60","60"}, {"εξήντα","60"}, {"εξηντα","60"},
+        {"70","70"}, {"εβδομήντα","70"}, {"εβδομηντα","70"},
+        {"80","80"}, {"ογδόντα","80"}, {"ογδοντα","80"},
+        {"90","90"}, {"ενενήντα","90"}, {"ενενηντα","90"}
+    };
+
+    private string PreprocessTranscript(string transcript)
+{
+    // 1) Remove accents so “Μηδέν” or “Νηδέν” both become “Μηδεν”
+    transcript = transcript
+        .Normalize(NormalizationForm.FormD)
+        .Where(c => CharUnicodeInfo.GetUnicodeCategory(c) != UnicodeCategory.NonSpacingMark)
+        .Aggregate("", (s, c) => s + c);
+    
+    // 2) Split on ANY non-alphanumeric (dots, commas, spaces, etc.)
+    var rawTokens = Regex.Split(transcript.ToLowerInvariant(), @"[^\p{L}\p{N}]+")
+                         .Where(t => t.Length > 0);
+
+    var digitTokens = new List<string>();
+
+    foreach (var tok in rawTokens)
+    {
+        // a) Known Greek number-word?
+        if (NumberMap.TryGetValue(tok, out var val))
+        {
+            digitTokens.Add(val);
+        }
+        // b) Pure digits?  (e.g. “123”)
+        else if (Regex.IsMatch(tok, @"^\d+$"))
+        {
+            digitTokens.Add(tok);
+        }
+        // c) Mixed token like “4.59.5”: strip non-digits, then split into single chars
+        else if (tok.Any(char.IsDigit))
+        {
+            var digitsOnly = Regex.Replace(tok, @"\D", "");
+            digitTokens.AddRange(digitsOnly.Select(c => c.ToString()));
+        }
+        // else: ignore
+    }
+
+    // 3) Flatten into one long digit string
+    var allDigits = string.Concat(digitTokens);
+
+    if (allDigits.Length < 5)
+        return ""; // we’ll catch this later as “could not parse”
+
+    // 4) First 4 digits → ID, rest → grade
+    var id = allDigits.Substring(0, 4);
+    var grade = allDigits.Substring(4);
+
+    return $"{id} βαθμός {grade}";
+}
+
     private void ProcessTranscript(string transcript)
     {
-        var match = Regex.Match(transcript, @"\b(\d)\s+(\d)\s+(\d)\s+(\d)\s+βαθμός\s+(\d+)", RegexOptions.IgnoreCase);
-        if (!match.Success) return;
-        string id = match.Groups[1].Value + match.Groups[2].Value + match.Groups[3].Value + match.Groups[4].Value;
-        string grade = match.Groups[5].Value;
+        if (excelLoader == null || !excelLoader.IsLoaded)
+        {
+            Debug.LogError("Please open an Excel file first!");
+            statusText.text = "Error: No file loaded";
+            return;
+        }
+       
+
+        var cleaned = PreprocessTranscript(transcript);
+        var match = Regex.Match(cleaned, @"^(\d{4})\s+βαθμός\s+(\d{1,3})$");
+        if (!match.Success)
+        {
+            Debug.LogWarning($"Could not parse command: '{cleaned}'");
+            return;
+        }
+        var id    = match.Groups[1].Value;
+        var grade = match.Groups[2].Value;
+
         int rowIndex = excelLoader.FindRowById(id);
         if (rowIndex < 0)
         {
-            Debug.LogError($"ID '{id}' not found.");
+            Debug.LogError($"ID '{id}' not found in column 0.");
             return;
         }
-        // Column 7 is index 6
-        excelLoader.UpdateCell(rowIndex, 6, grade);
+
+        excelLoader.UpdateCell(rowIndex, 7, grade);
         Debug.Log($"Set grade for ID {id} to {grade}.");
     }
 
