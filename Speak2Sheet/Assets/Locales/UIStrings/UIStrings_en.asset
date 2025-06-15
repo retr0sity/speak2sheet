@@ -17,7 +17,31 @@ MonoBehaviour:
   m_SharedData: {fileID: 11400000, guid: 6a4177412360977deb96e9c34575b5ee, type: 2}
   m_Metadata:
     m_Items: []
-  m_TableData: []
+  m_TableData:
+  - m_Id: 108232202285056
+    m_Localized: Save
+    m_Metadata:
+      m_Items: []
+  - m_Id: 108378583494656
+    m_Localized: Open Excel File (xlsx)
+    m_Metadata:
+      m_Items: []
+  - m_Id: 109169092358144
+    m_Localized: Start Recording
+    m_Metadata:
+      m_Items: []
+  - m_Id: 109745033211904
+    m_Localized: Settings
+    m_Metadata:
+      m_Items: []
+  - m_Id: 109849597210624
+    m_Localized: Back
+    m_Metadata:
+      m_Items: []
+  - m_Id: 109945592246272
+    m_Localized: English
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []

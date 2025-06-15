@@ -14,7 +14,31 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_TableCollectionName: UIStrings
   m_TableCollectionNameGuidString: 6a4177412360977deb96e9c34575b5ee
-  m_Entries: []
+  m_Entries:
+  - m_Id: 108232202285056
+    m_Key: ID_save
+    m_Metadata:
+      m_Items: []
+  - m_Id: 108378583494656
+    m_Key: ID_OpenExcel
+    m_Metadata:
+      m_Items: []
+  - m_Id: 109169092358144
+    m_Key: ID_Recording
+    m_Metadata:
+      m_Items: []
+  - m_Id: 109745033211904
+    m_Key: ID_Settings
+    m_Metadata:
+      m_Items: []
+  - m_Id: 109849597210624
+    m_Key: ID_Back
+    m_Metadata:
+      m_Items: []
+  - m_Id: 109945592246272
+    m_Key: ID_Toggle
+    m_Metadata:
+      m_Items: []
   m_Metadata:
     m_Items: []
   m_KeyGenerator:
