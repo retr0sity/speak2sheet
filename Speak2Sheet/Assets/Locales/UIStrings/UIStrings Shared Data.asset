@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: UIStrings Shared Data
   m_EditorClassIdentifier: 
   m_TableCollectionName: UIStrings
-  m_TableCollectionNameGuidString: 00000000000000000000000000000000
+  m_TableCollectionNameGuidString: 6a4177412360977deb96e9c34575b5ee
   m_Entries: []
   m_Metadata:
     m_Items: []
