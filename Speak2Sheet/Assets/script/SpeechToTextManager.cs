@@ -499,16 +499,18 @@ private string ExtractGradeOnly(string transcript)
 
     foreach (var tok in tokens)
     {
-        // first try your number-words
-        if (NumberMap.TryGetValue(tok, out var val))
+        // drop any trailing dot (“3.” → “3”)
+        var candidate = tok.TrimEnd('.');
+
+        // 1) number‐words
+        if (NumberMap.TryGetValue(candidate, out var val))
             return val;
 
-        // then pure integers or decimals
-        if (Regex.IsMatch(tok, @"^\d+(\.\d+)?$"))
-            return tok;
+        // 2) integer or decimal ("3" or "7.3")
+        if (Regex.IsMatch(candidate, @"^\d+(\.\d+)?$"))
+            return candidate;
     }
 
-    // nothing suitable found
     return null;
 }
 

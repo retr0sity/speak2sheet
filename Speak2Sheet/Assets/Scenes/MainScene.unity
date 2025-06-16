@@ -383,7 +383,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 57d0bfbd3d7db1647a1bdb9b2b845760, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  autoSaveToggle: {fileID: 0}
+  autoSaveToggle: {fileID: 948456060}
   excelLoader: {fileID: 2090797578}
 --- !u!4 &105852829
 Transform:
@@ -3331,7 +3331,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 1037.6001, y: 270}
+  m_AnchoredPosition: {x: 1037.6001, y: 284}
   m_SizeDelta: {x: 279.23, y: 65.849}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &1415243409
@@ -5495,6 +5495,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d25a30fb6cfc18c4fa2bc293e226c544, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  autoSaveController: {fileID: 105852828}
   openExcelButton: {fileID: 1596589288}
   gridContent: {fileID: 992554102}
   cellPrefab: {fileID: 1865098233}

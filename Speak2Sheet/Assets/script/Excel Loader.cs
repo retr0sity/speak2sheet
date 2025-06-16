@@ -13,9 +13,15 @@ using NPOI.XSSF.UserModel;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
+using Org.BouncyCastle.Security;
+
+
 
 public class ExcelLoader : MonoBehaviour
 {
+
+    [Header("Auto-Save")]
+    [SerializeField] private AutoSaveController autoSaveController;
 
     // A single cell change
     private struct Change
@@ -25,8 +31,8 @@ public class ExcelLoader : MonoBehaviour
         public string OldValue;
     }
 
-// Stack to hold your history
-private Stack<Change> undoStack = new Stack<Change>();
+    // Stack to hold your history
+    private Stack<Change> undoStack = new Stack<Change>();
 
     [Header("UI References")]
     [SerializeField] private Button openExcelButton;
@@ -74,15 +80,15 @@ private Stack<Change> undoStack = new Stack<Change>();
         cell.SetCellValue(change.OldValue);
 
         // revert the DataTable
-        if (currentTable != null 
-            && change.RowIndex < currentTable.Rows.Count 
+        if (currentTable != null
+            && change.RowIndex < currentTable.Rows.Count
             && change.ColIndex < currentTable.Columns.Count)
         {
             currentTable.Rows[change.RowIndex][change.ColIndex] = change.OldValue;
         }
 
         PopulateGrid(currentTable);
-        Debug.Log($"Undid change at row {change.RowIndex+1}, col {change.ColIndex+1}: restored '{change.OldValue}'");
+        Debug.Log($"Undid change at row {change.RowIndex + 1}, col {change.ColIndex + 1}: restored '{change.OldValue}'");
 
         // disable if we're out of history
         undoButton.interactable = (undoStack.Count > 0);
@@ -209,41 +215,42 @@ private Stack<Change> undoStack = new Stack<Change>();
 
 
     public void UpdateCell(int rowIndex, int colIndex, string newValue)
-{
-    if (sheet == null || workbook == null || string.IsNullOrEmpty(currentFilePath))
     {
-        Debug.LogError("No workbook loaded. Cannot update cell.");
-        return;
+        if (sheet == null || workbook == null || string.IsNullOrEmpty(currentFilePath))
+        {
+            Debug.LogError("No workbook loaded. Cannot update cell.");
+            return;
+        }
+
+        // --- capture old value ---
+        var row = sheet.GetRow(rowIndex) ?? sheet.CreateRow(rowIndex);
+        var cell = row.GetCell(colIndex) ?? row.CreateCell(colIndex);
+        string oldValue = cell.ToString();
+        undoStack.Push(new Change
+        {
+            RowIndex = rowIndex,
+            ColIndex = colIndex,
+            OldValue = oldValue
+        });
+
+        // --- now apply the new one ---
+        cell.SetCellValue(newValue);
+
+        // also update your in-memory DataTable
+        if (currentTable != null
+            && rowIndex < currentTable.Rows.Count
+            && colIndex < currentTable.Columns.Count)
+        {
+            currentTable.Rows[rowIndex][colIndex] = newValue;
+        }
+
+        PopulateGrid(currentTable);
+        Debug.Log($"Cell updated in-memory at row {rowIndex + 1}, col {colIndex + 1} => {newValue}");
+        autoSaveController.TriggerAutoSave(); // call your auto-save logic
+                                              // enable Undo button now that we have history
+        if (undoButton != null)
+            undoButton.interactable = true;
     }
-
-    // --- capture old value ---
-    var row = sheet.GetRow(rowIndex) ?? sheet.CreateRow(rowIndex);
-    var cell = row.GetCell(colIndex) ?? row.CreateCell(colIndex);
-    string oldValue = cell.ToString();
-    undoStack.Push(new Change {
-        RowIndex = rowIndex,
-        ColIndex = colIndex,
-        OldValue = oldValue
-    });
-
-    // --- now apply the new one ---
-    cell.SetCellValue(newValue);
-
-    // also update your in-memory DataTable
-    if (currentTable != null 
-        && rowIndex < currentTable.Rows.Count 
-        && colIndex < currentTable.Columns.Count)
-    {
-        currentTable.Rows[rowIndex][colIndex] = newValue;
-    }
-
-    PopulateGrid(currentTable);
-    Debug.Log($"Cell updated in-memory at row {rowIndex+1}, col {colIndex+1} => {newValue}");
-
-    // enable Undo button now that we have history
-    if (undoButton != null)
-        undoButton.interactable = true;
-}
 
 
     private void OnDestroy()
@@ -275,74 +282,74 @@ private Stack<Change> undoStack = new Stack<Change>();
     /// Returns zero-based sheet row indices whose Column1 contains the given name fragment.
     /// </summary>
     public List<int> FindRowsByPartialName(string nameFragment, int nameColumnIndex = 1)
-{
-    var results = new List<int>();
-    var fuzzy   = new List<(int row, int dist)>();
-    if (currentTable == null) return results;
-
-    // 1) Normalize the fragment
-    string cleanFrag = CleanString(nameFragment);
-
-    // 2) Dynamically pick a max distance:
-    //    - At least 1, up to 6
-    //    - E.g. half the fragment length, capped at 6
-    int dynamicMax = Math.Min(6, Math.Max(1, (int)Math.Ceiling(cleanFrag.Length * 0.5)));
-
-    for (int i = 1; i < currentTable.Rows.Count; i++)
     {
-        string raw  = currentTable.Rows[i][nameColumnIndex]?.ToString() ?? "";
-        string cell = CleanString(raw);
+        var results = new List<int>();
+        var fuzzy = new List<(int row, int dist)>();
+        if (currentTable == null) return results;
 
-        if (cell.Contains(cleanFrag))
+        // 1) Normalize the fragment
+        string cleanFrag = CleanString(nameFragment);
+
+        // 2) Dynamically pick a max distance:
+        //    - At least 1, up to 6
+        //    - E.g. half the fragment length, capped at 6
+        int dynamicMax = Math.Min(6, Math.Max(1, (int)Math.Ceiling(cleanFrag.Length * 0.5)));
+
+        for (int i = 1; i < currentTable.Rows.Count; i++)
         {
-            // exact substring hit
-            results.Add(i);
+            string raw = currentTable.Rows[i][nameColumnIndex]?.ToString() ?? "";
+            string cell = CleanString(raw);
+
+            if (cell.Contains(cleanFrag))
+            {
+                // exact substring hit
+                results.Add(i);
+            }
+            else
+            {
+                int d = ComputeLevenshteinDistance(cell, cleanFrag);
+                if (d <= dynamicMax)
+                    fuzzy.Add((i, d));
+            }
         }
-        else
-        {
-            int d = ComputeLevenshteinDistance(cell, cleanFrag);
-            if (d <= dynamicMax)
-                fuzzy.Add((i, d));
-        }
+
+        // 3) Append fuzzy matches in order of closeness
+        foreach (var pair in fuzzy.OrderBy(x => x.dist))
+            results.Add(pair.row);
+
+        return results;
     }
 
-    // 3) Append fuzzy matches in order of closeness
-    foreach (var pair in fuzzy.OrderBy(x => x.dist))
-        results.Add(pair.row);
-
-    return results;
-}
-
-private static string CleanString(string input)
-{
-    // uppercase, strip punctuation, collapse spaces
-    var s = Regex.Replace(input.ToUpperInvariant(), @"[^\p{L}\p{N}\s]+", "");
-    return Regex.Replace(s, @"\s+", " ").Trim();
-}
-
-private static int ComputeLevenshteinDistance(string s, string t)
-{
-    int n = s.Length, m = t.Length;
-    if (n == 0) return m;
-    if (m == 0) return n;
-
-    var d = new int[n + 1, m + 1];
-    for (int i = 0; i <= n; i++) d[i, 0] = i;
-    for (int j = 0; j <= m; j++) d[0, j] = j;
-
-    for (int i = 1; i <= n; i++)
-    for (int j = 1; j <= m; j++)
+    private static string CleanString(string input)
     {
-        int cost = (s[i - 1] == t[j - 1]) ? 0 : 1;
-        d[i, j] = new[] {
+        // uppercase, strip punctuation, collapse spaces
+        var s = Regex.Replace(input.ToUpperInvariant(), @"[^\p{L}\p{N}\s]+", "");
+        return Regex.Replace(s, @"\s+", " ").Trim();
+    }
+
+    private static int ComputeLevenshteinDistance(string s, string t)
+    {
+        int n = s.Length, m = t.Length;
+        if (n == 0) return m;
+        if (m == 0) return n;
+
+        var d = new int[n + 1, m + 1];
+        for (int i = 0; i <= n; i++) d[i, 0] = i;
+        for (int j = 0; j <= m; j++) d[0, j] = j;
+
+        for (int i = 1; i <= n; i++)
+            for (int j = 1; j <= m; j++)
+            {
+                int cost = (s[i - 1] == t[j - 1]) ? 0 : 1;
+                d[i, j] = new[] {
             d[i - 1, j] + 1,
             d[i, j - 1] + 1,
             d[i - 1, j - 1] + cost
         }.Min();
-    }
+            }
 
-    return d[n, m];
-}
+        return d[n, m];
+    }
 
 
     /// <summary>
@@ -358,6 +365,6 @@ private static int ComputeLevenshteinDistance(string s, string t)
             return "";
         return currentTable.Rows[rowIndex][colIndex]?.ToString() ?? "";
     }
-    
+
 
 }
