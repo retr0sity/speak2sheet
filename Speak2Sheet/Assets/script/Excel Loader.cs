@@ -16,10 +16,27 @@ using System.Text.RegularExpressions;
 
 public class ExcelLoader : MonoBehaviour
 {
+
+    // A single cell change
+    private struct Change
+    {
+        public int RowIndex;
+        public int ColIndex;
+        public string OldValue;
+    }
+
+// Stack to hold your history
+private Stack<Change> undoStack = new Stack<Change>();
+
     [Header("UI References")]
     [SerializeField] private Button openExcelButton;
     [SerializeField] private RectTransform gridContent;
     [SerializeField] private GameObject cellPrefab; // Prefab with a TextMeshProUGUI component
+
+    [Header("Save Controls")]
+    [SerializeField] private Button saveButton;   // assign in the Inspector
+    [SerializeField] private Button undoButton;   // assign in the Inspector
+
 
     private string currentFilePath;
     private IWorkbook workbook;
@@ -33,6 +50,42 @@ public class ExcelLoader : MonoBehaviour
         FileBrowser.SetFilters(true, new FileBrowser.Filter("Excel Files", ".xls", ".xlsx"));
         FileBrowser.SetDefaultFilter(".xlsx");
         openExcelButton.onClick.AddListener(ShowFileDialog);
+        saveButton.onClick.AddListener(OnSaveButtonClicked);
+        // Existing code…
+        if (undoButton != null)
+        {
+            undoButton.onClick.AddListener(UndoLastChange);
+            undoButton.interactable = false;  // disabled until you have something to undo
+        }
+    }
+
+    private void UndoLastChange()
+    {
+        if (undoStack.Count == 0)
+        {
+            Debug.Log("Nothing to undo.");
+            return;
+        }
+
+        var change = undoStack.Pop();
+        // revert the sheet
+        var row = sheet.GetRow(change.RowIndex) ?? sheet.CreateRow(change.RowIndex);
+        var cell = row.GetCell(change.ColIndex) ?? row.CreateCell(change.ColIndex);
+        cell.SetCellValue(change.OldValue);
+
+        // revert the DataTable
+        if (currentTable != null 
+            && change.RowIndex < currentTable.Rows.Count 
+            && change.ColIndex < currentTable.Columns.Count)
+        {
+            currentTable.Rows[change.RowIndex][change.ColIndex] = change.OldValue;
+        }
+
+        PopulateGrid(currentTable);
+        Debug.Log($"Undid change at row {change.RowIndex+1}, col {change.ColIndex+1}: restored '{change.OldValue}'");
+
+        // disable if we're out of history
+        undoButton.interactable = (undoStack.Count > 0);
     }
 
     private void ShowFileDialog()
@@ -48,6 +101,29 @@ public class ExcelLoader : MonoBehaviour
             "Open"
         );
     }
+
+    private void OnSaveButtonClicked()
+{
+    if (string.IsNullOrEmpty(currentFilePath) || workbook == null)
+    {
+        Debug.LogError("No file loaded to save!");
+        return;
+    }
+
+    try
+    {
+        using (var fs = new FileStream(currentFilePath, FileMode.Create, FileAccess.Write))
+        {
+            workbook.Write(fs);
+        }
+        Debug.Log("Excel file saved to disk.");
+    }
+    catch (Exception ex)
+    {
+        Debug.LogError($"Failed to save Excel file: {ex.Message}");
+    }
+}
+
 
     private void LoadAndDisplayExcel(string filePath)
     {
@@ -127,30 +203,42 @@ public class ExcelLoader : MonoBehaviour
 
 
     public void UpdateCell(int rowIndex, int colIndex, string newValue)
+{
+    if (sheet == null || workbook == null || string.IsNullOrEmpty(currentFilePath))
     {
-        if (sheet == null || workbook == null || string.IsNullOrEmpty(currentFilePath))
-        {
-            Debug.LogError("No workbook loaded. Cannot update cell.");
-            return;
-        }
-
-        var row = sheet.GetRow(rowIndex) ?? sheet.CreateRow(rowIndex);
-        var cell = row.GetCell(colIndex) ?? row.CreateCell(colIndex);
-        cell.SetCellValue(newValue);
-
-        if (currentTable != null && rowIndex < currentTable.Rows.Count && colIndex < currentTable.Columns.Count)
-            currentTable.Rows[rowIndex][colIndex] = newValue;
-
-        // Option A: Truncate & overwrite
-        using (var fs = new FileStream(currentFilePath, FileMode.Create, FileAccess.Write))
-        {
-            workbook.Write(fs);
-        }
-
-
-        PopulateGrid(currentTable);
-        Debug.Log($"Cell updated at row {rowIndex + 1}, col {colIndex + 1} => {newValue}");
+        Debug.LogError("No workbook loaded. Cannot update cell.");
+        return;
     }
+
+    // --- capture old value ---
+    var row = sheet.GetRow(rowIndex) ?? sheet.CreateRow(rowIndex);
+    var cell = row.GetCell(colIndex) ?? row.CreateCell(colIndex);
+    string oldValue = cell.ToString();
+    undoStack.Push(new Change {
+        RowIndex = rowIndex,
+        ColIndex = colIndex,
+        OldValue = oldValue
+    });
+
+    // --- now apply the new one ---
+    cell.SetCellValue(newValue);
+
+    // also update your in-memory DataTable
+    if (currentTable != null 
+        && rowIndex < currentTable.Rows.Count 
+        && colIndex < currentTable.Columns.Count)
+    {
+        currentTable.Rows[rowIndex][colIndex] = newValue;
+    }
+
+    PopulateGrid(currentTable);
+    Debug.Log($"Cell updated in-memory at row {rowIndex+1}, col {colIndex+1} => {newValue}");
+
+    // enable Undo button now that we have history
+    if (undoButton != null)
+        undoButton.interactable = true;
+}
+
 
     private void OnDestroy()
     {
