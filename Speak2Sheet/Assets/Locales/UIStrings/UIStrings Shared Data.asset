@@ -39,6 +39,14 @@ MonoBehaviour:
     m_Key: ID_Toggle
     m_Metadata:
       m_Items: []
+  - m_Id: 409071789830144
+    m_Key: ID_Undo
+    m_Metadata:
+      m_Items: []
+  - m_Id: 416464208687104
+    m_Key: ID_Autosave
+    m_Metadata:
+      m_Items: []
   m_Metadata:
     m_Items: []
   m_KeyGenerator:
