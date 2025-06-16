@@ -46,6 +46,10 @@ MonoBehaviour:
     m_Localized: Undo
     m_Metadata:
       m_Items: []
+  - m_Id: 416464208687104
+    m_Localized: Autosave
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []

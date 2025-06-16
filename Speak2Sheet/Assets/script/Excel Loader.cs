@@ -103,26 +103,32 @@ private Stack<Change> undoStack = new Stack<Change>();
     }
 
     private void OnSaveButtonClicked()
-{
-    if (string.IsNullOrEmpty(currentFilePath) || workbook == null)
     {
-        Debug.LogError("No file loaded to save!");
-        return;
+        if (string.IsNullOrEmpty(currentFilePath) || workbook == null)
+        {
+            Debug.LogError("No file loaded to save!");
+            return;
+        }
+
+        try
+        {
+            using (var fs = new FileStream(currentFilePath, FileMode.Create, FileAccess.Write))
+            {
+                workbook.Write(fs);
+            }
+            Debug.Log("Excel file saved to disk.");
+        }
+        catch (Exception ex)
+        {
+            Debug.LogError($"Failed to save Excel file: {ex.Message}");
+        }
     }
 
-    try
+    public void SaveFile()
     {
-        using (var fs = new FileStream(currentFilePath, FileMode.Create, FileAccess.Write))
-        {
-            workbook.Write(fs);
-        }
-        Debug.Log("Excel file saved to disk.");
+        OnSaveButtonClicked();
     }
-    catch (Exception ex)
-    {
-        Debug.LogError($"Failed to save Excel file: {ex.Message}");
-    }
-}
+
 
 
     private void LoadAndDisplayExcel(string filePath)
