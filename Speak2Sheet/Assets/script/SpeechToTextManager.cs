@@ -13,15 +13,10 @@ using System.Text.RegularExpressions;
 using Debug = UnityEngine.Debug;
 using System.Linq;
 using System.Globalization;
+using System.Text.RegularExpressions;
 
 public class SpeechToTextManager : MonoBehaviour
 {
-
-    private enum Mode
-    {
-        SelectingEntry,
-        RecordingGrade
-    }
     [Header("UI References")]
     [SerializeField] private Button recordButton;
     [SerializeField] private TMP_Text recordButtonText;
@@ -39,11 +34,6 @@ public class SpeechToTextManager : MonoBehaviour
     [Header("Excel Integration")]
     [SerializeField] private ExcelLoader excelLoader;
 
-    [Header("UI References (new)")]
-    [SerializeField] private GameObject resultsPanel;        // parent panel for the scroll-view
-    [SerializeField] private RectTransform resultsContent;   // content under a ScrollRect
-    [SerializeField] private GameObject resultItemPrefab;    // a Button + TMP_Text for each candidate
-
     private string whisperExePath;
     private string modelBinPath;
     private string grammarFilePath;
@@ -51,10 +41,6 @@ public class SpeechToTextManager : MonoBehaviour
     private bool isRecording;
     private AudioClip clip;
     private CancellationTokenSource cts;
-    private Mode currentMode = Mode.SelectingEntry;
-    private int selectedRowIndex = -1;
-
-    
 
     private void Awake()
     {
@@ -65,8 +51,6 @@ public class SpeechToTextManager : MonoBehaviour
     private void Start()
     {
         recordButton.onClick.AddListener(OnRecordButtonClicked);
-        // hide result list at start
-        resultsPanel.SetActive(false);
         UpdateUI();
     }
 
@@ -335,185 +319,82 @@ public class SpeechToTextManager : MonoBehaviour
 
     private string PreprocessTranscript(string transcript)
 {
-    // 1) Strip accents
+    // 1) Remove accents so “Μηδέν” or “Νηδέν” both become “Μηδεν”
     transcript = transcript
         .Normalize(NormalizationForm.FormD)
         .Where(c => CharUnicodeInfo.GetUnicodeCategory(c) != UnicodeCategory.NonSpacingMark)
         .Aggregate("", (s, c) => s + c);
-
-    // 2) Remove ALL punctuation except dot and whitespace
-    transcript = Regex.Replace(transcript, @"[^\p{L}\p{N}\.\s]+", " ");
-
-    // 3) Split on anything that’s not a letter, digit, or dot
-    var rawTokens = Regex
-        .Split(transcript.ToUpperInvariant(), @"[^\p{L}\p{N}\.]+")
-        .Where(t => t.Length > 0);
+    
+    // 2) Split on ANY non-alphanumeric (dots, commas, spaces, etc.)
+    var rawTokens = Regex.Split(transcript.ToLowerInvariant(), @"[^\p{L}\p{N}]+")
+                         .Where(t => t.Length > 0);
 
     var digitTokens = new List<string>();
 
     foreach (var tok in rawTokens)
     {
+        // a) Known Greek number-word?
         if (NumberMap.TryGetValue(tok, out var val))
+        {
             digitTokens.Add(val);
-        else if (Regex.IsMatch(tok, @"^\d+(\.\d+)?$"))
+        }
+        // b) Pure digits?  (e.g. “123”)
+        else if (Regex.IsMatch(tok, @"^\d+$"))
+        {
             digitTokens.Add(tok);
+        }
+        // c) Mixed token like “4.59.5”: strip non-digits, then split into single chars
         else if (tok.Any(char.IsDigit))
         {
             var digitsOnly = Regex.Replace(tok, @"\D", "");
             digitTokens.AddRange(digitsOnly.Select(c => c.ToString()));
         }
+        // else: ignore
     }
 
-    var all = string.Concat(digitTokens);
-    if (all.Length < 5) return "";
+    // 3) Flatten into one long digit string
+    var allDigits = string.Concat(digitTokens);
 
-    var id    = all.Substring(0, 4);
-    var grade = all.Substring(4);
-    return $"{id} ΒΑΘΜΟΣ {grade}";
+    if (allDigits.Length < 5)
+        return ""; // we’ll catch this later as “could not parse”
+
+    // 4) First 4 digits → ID, rest → grade
+    var id = allDigits.Substring(0, 4);
+    var grade = allDigits.Substring(4);
+
+    return $"{id} βαθμός {grade}";
 }
-
 
     private void ProcessTranscript(string transcript)
     {
-        if (currentMode == Mode.SelectingEntry)
-            HandleSelectionTranscript(transcript);
-        else
-            HandleGradeTranscript(transcript);
+        if (excelLoader == null || !excelLoader.IsLoaded)
+        {
+            Debug.LogError("Please open an Excel file first!");
+            statusText.text = "Error: No file loaded";
+            return;
+        }
+       
+
+        var cleaned = PreprocessTranscript(transcript);
+        var match = Regex.Match(cleaned, @"^(\d{4})\s+βαθμός\s+(\d{1,3})$");
+        if (!match.Success)
+        {
+            Debug.LogWarning($"Could not parse command: '{cleaned}'");
+            return;
+        }
+        var id    = match.Groups[1].Value;
+        var grade = match.Groups[2].Value;
+
+        int rowIndex = excelLoader.FindRowById(id);
+        if (rowIndex < 0)
+        {
+            Debug.LogError($"ID '{id}' not found in column 0.");
+            return;
+        }
+
+        excelLoader.UpdateCell(rowIndex, 7, grade);
+        Debug.Log($"Set grade for ID {id} to {grade}.");
     }
-
-    private void HandleSelectionTranscript(string transcript)
-    {
-        // ——————————————————————————————————————————
-    // 1) Clean the incoming string: remove ALL punctuation
-    //    (this will turn "Ανδρεαδης!" → "Ανδρεαδης")
-    var clean = Regex.Replace(transcript, @"[^\p{L}\p{N}\s\.]", "")   // keep letters, digits, whitespace, dot
-                     .Trim();
-
-    // (optionally lowercase so matching is case‐insensitive)
-    clean = clean.ToUpperInvariant();
-
-    // 2) Now decide: is this digits or words?
-    var digitsOnly = Regex.Replace(clean, @"\D+", "");
-    List<int> matches;
-    if (!string.IsNullOrEmpty(digitsOnly))
-    {
-        // partial‐ID match
-        matches = excelLoader.FindRowsByPartialId(digitsOnly);
-    }
-    else
-    {
-        // partial‐name match
-        matches = excelLoader.FindRowsByPartialName(clean);
-    }
-
-    if (matches.Count == 0)
-    {
-        ShowError($"No entries found for “{clean}”");
-        return;
-    }
-
-        // populate the scroll view
-        // Clear out old items
-foreach (Transform t in resultsContent) 
-    Destroy(t.gameObject);
-
-// Log how many we found
-Debug.Log($"[Results] Found {matches.Count} candidate rows");
-
-// For each match…
-foreach (var row in matches)
-{
-    // Instantiate as a child with local transform reset
-    var go = Instantiate(resultItemPrefab, resultsContent, false);
-    go.SetActive(true);
-
-    // Fill in the text
-    var txt = go.GetComponentInChildren<TMP_Text>();
-    string id   = excelLoader.GetCellValue(row, 0);
-    string name = excelLoader.GetCellValue(row, 1);
-    txt.text = $"{id} – {name}";
-
-    // Hook up the button (clear old listeners first)
-    var btn = go.GetComponent<Button>();
-    btn.onClick.RemoveAllListeners();
-    btn.onClick.AddListener(() => OnMatchSelected(row));
-}
-
-        resultsPanel.SetActive(true);
-        statusText.text = "Select the right entry";
-    }
-
-    private void OnMatchSelected(int rowIndex)
-    {
-        selectedRowIndex = rowIndex;
-        resultsPanel.SetActive(false);
-
-        // now go record the grade
-        currentMode = Mode.RecordingGrade;
-        isRecording = false;          // ensure correct toggle
-        StartRecording();             // kick off immediately
-        isRecording = true;
-        UpdateUI();
-    }
-
-    private void HandleGradeTranscript(string transcript)
-{
-    var grade = ExtractGradeOnly(transcript);
-    Debug.Log($"[Debug] extracted grade: '{grade}'");
-
-    if (string.IsNullOrEmpty(grade))
-    {
-        ShowError($"Could not parse grade from '{transcript}'");
-        currentMode = Mode.SelectingEntry;
-        return;
-    }
-
-    excelLoader.UpdateCell(selectedRowIndex, 7, grade);
-    statusText.text = $"Wrote grade {grade}";
-    Debug.Log($"[Whisper] Set grade for row {selectedRowIndex} to {grade}");
-
-    currentMode = Mode.SelectingEntry;
-    selectedRowIndex = -1;
-}
-
-
-    /// <summary>
-/// Cleans & returns the first numeric token (integer or decimal) from the transcript,
-/// or null if none found.
-/// </summary>
-private string ExtractGradeOnly(string transcript)
-{
-    // 1) strip accents (same as before)
-    transcript = transcript
-        .Normalize(NormalizationForm.FormD)
-        .Where(c => CharUnicodeInfo.GetUnicodeCategory(c) != UnicodeCategory.NonSpacingMark)
-        .Aggregate("", (s, c) => s + c);
-
-    // 2) remove all punctuation except dot and whitespace
-    transcript = Regex.Replace(transcript, @"[^\p{L}\p{N}\.\s]+", " ");
-
-    // 3) split on anything that’s not a letter, digit or dot
-    var tokens = Regex
-        .Split(transcript.ToUpperInvariant(), @"[^\p{L}\p{N}\.]+")
-        .Where(t => t.Length > 0);
-
-    foreach (var tok in tokens)
-    {
-        // drop any trailing dot (“3.” → “3”)
-        var candidate = tok.TrimEnd('.');
-
-        // 1) number‐words
-        if (NumberMap.TryGetValue(candidate, out var val))
-            return val;
-
-        // 2) integer or decimal ("3" or "7.3")
-        if (Regex.IsMatch(candidate, @"^\d+(\.\d+)?$"))
-            return candidate;
-    }
-
-    return null;
-}
-
 
     private void ShowError(string message)
     {
