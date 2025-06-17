@@ -14,6 +14,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
 using Org.BouncyCastle.Security;
+using System.Text;
 
 
 
@@ -39,6 +40,18 @@ public class ExcelLoader : MonoBehaviour
     [SerializeField] private RectTransform gridContent;
     [SerializeField] private GameObject cellPrefab; // Prefab with a TextMeshProUGUI component
 
+    [Header("Display Settings")]
+    [Tooltip("Which column indices to show in the grid")]  
+    [SerializeField] private List<int> desiredColumns = new List<int> { 0, 1, 6, 7 };
+    [Tooltip("Start displaying from this row index (0-based, include header if needed)")]
+    [SerializeField] private int startRowIndex = 1;
+
+    [Header("Lookup Settings")]
+    [Tooltip("Column index used when finding rows by ID")]  
+    [SerializeField] private int idColumnIndex = 0;
+    [Tooltip("Column index used for grades lookup")]  
+    [SerializeField] private int gradeColumnIndex = 7;
+
     [Header("Save Controls")]
     [SerializeField] private Button saveButton;   // assign in the Inspector
     [SerializeField] private Button undoButton;   // assign in the Inspector
@@ -51,8 +64,15 @@ public class ExcelLoader : MonoBehaviour
 
     public bool IsLoaded => sheet != null && currentTable != null;
 
+    // Expose for other scripts or UI
+    public List<int> DesiredColumns => desiredColumns;
+    public int StartRowIndex => startRowIndex;
+    public int IdColumnIndex => idColumnIndex;
+    public int GradeColumnIndex => gradeColumnIndex;
+
     private void Awake()
     {
+        Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
         FileBrowser.SetFilters(true, new FileBrowser.Filter("Excel Files", ".xls", ".xlsx"));
         FileBrowser.SetDefaultFilter(".xlsx");
         openExcelButton.onClick.AddListener(ShowFileDialog);
@@ -137,7 +157,7 @@ public class ExcelLoader : MonoBehaviour
 
 
 
-    private void LoadAndDisplayExcel(string filePath)
+    public void LoadAndDisplayExcel(string filePath)
     {
         try
         {
@@ -172,13 +192,14 @@ public class ExcelLoader : MonoBehaviour
         }
     }
 
+    
+
     private void PopulateGrid(DataTable table)
     {
         foreach (Transform child in gridContent) Destroy(child.gameObject);
 
         int rows = table.Rows.Count;
-        int[] desiredCols = { 0, 1, 6, 7 };
-        int visibleCols = desiredCols.Length;
+        int visibleCols = desiredColumns.Count;
 
         var grid = gridContent.GetComponent<GridLayoutGroup>();
         if (grid != null)
@@ -187,9 +208,9 @@ public class ExcelLoader : MonoBehaviour
             grid.constraintCount = visibleCols;
         }
 
-        for (int r = 1; r < rows; r++)
+        for (int r = startRowIndex; r < rows; r++)
         {
-            foreach (int c in desiredCols)
+            foreach (int c in desiredColumns)
             {
                 if (c < 0 || c >= table.Columns.Count) continue;
                 var cell = Instantiate(cellPrefab, gridContent);
@@ -200,19 +221,28 @@ public class ExcelLoader : MonoBehaviour
         }
     }
 
-    public int FindRowById(string id, int idColumnIndex = 0)
+    public int FindRowById(string id)
     {
-        if (currentTable == null) return -1;
-        for (int i = 1; i < currentTable.Rows.Count; i++)
+        if (currentTable == null)
+            return -1;
+        for (int i = startRowIndex; i < currentTable.Rows.Count; i++)
         {
-            var cellValue = currentTable.Rows[i][idColumnIndex]?.ToString() ?? "";
-            // match if the recorded ID ends with the spoken 4-digit id
+            var cellValue = currentTable.Rows[i][idColumnIndex]?.ToString() ?? string.Empty;
             if (cellValue.EndsWith(id, StringComparison.Ordinal))
                 return i;
         }
         return -1;
     }
 
+    /// <summary>
+    /// Retrieves the grade value for a given table row, using the configured grade column.
+    /// </summary>
+    public string GetGradeForRow(int rowIndex)
+    {
+        if (currentTable == null || rowIndex < startRowIndex || rowIndex >= currentTable.Rows.Count)
+            return string.Empty;
+        return currentTable.Rows[rowIndex][gradeColumnIndex]?.ToString() ?? string.Empty;
+    }
 
     public void UpdateCell(int rowIndex, int colIndex, string newValue)
     {
