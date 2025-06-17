@@ -202,10 +202,19 @@ public class ExcelLoader : MonoBehaviour
         }
     }
 
-    
+    /// <summary>
+    /// Re-applies the current DesiredColumns & startRowIndex settings to the grid.
+    /// </summary>
+    public void RefreshDisplay()
+    {
+         Debug.Log($"[ExcelLoader] RefreshDisplay() called; DesiredColumns now = [{string.Join(",", desiredColumns)}]");
+        if (currentTable != null)
+            PopulateGrid(currentTable);
+    }
 
     private void PopulateGrid(DataTable table)
     {
+        Debug.Log($"[ExcelLoader] PopulateGrid: startRow={startRowIndex}, totalRows={table.Rows.Count}, visibleCols={desiredColumns.Count}");
         foreach (Transform child in gridContent) Destroy(child.gameObject);
 
         int rows = table.Rows.Count;
