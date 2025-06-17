@@ -24,6 +24,13 @@ public class ExcelLoader : MonoBehaviour
     [Header("Auto-Save")]
     [SerializeField] private AutoSaveController autoSaveController;
 
+    [Header("Lookup Settings")]
+    [Tooltip("Column index used when finding rows by Name")]
+    [SerializeField] private int nameColumnIndex = 1;
+
+    public int NameColumnIndex => nameColumnIndex;
+
+
     // A single cell change
     private struct Change
     {
@@ -69,6 +76,9 @@ public class ExcelLoader : MonoBehaviour
     public int StartRowIndex => startRowIndex;
     public int IdColumnIndex => idColumnIndex;
     public int GradeColumnIndex => gradeColumnIndex;
+    public void SetIdColumnIndex(int idx)    => idColumnIndex    = idx;
+    public void SetNameColumnIndex(int idx)  => nameColumnIndex  = idx;
+    public void SetGradeColumnIndex(int idx) => gradeColumnIndex = idx;
 
     private void Awake()
     {
@@ -291,64 +301,71 @@ public class ExcelLoader : MonoBehaviour
     /// <summary>
     /// Returns zero-based sheet row indices whose Column0 text contains or ends with partialId.
     /// </summary>
-    public List<int> FindRowsByPartialId(string partialId, int idColumnIndex = 0)
+    // 1) Single-arg overload, uses the configured field:
+public List<int> FindRowsByPartialId(string fragment)
+    => FindRowsByPartialId(fragment, idColumnIndex);
+
+// 2) The real implementation (no default!):
+public List<int> FindRowsByPartialId(string partialId, int idColumnIndex)
+{
+    var matches = new List<int>();
+    if (currentTable == null) return matches;
+
+    for (int i = startRowIndex; i < currentTable.Rows.Count; i++)
     {
-        var matches = new List<int>();
-        if (currentTable == null) return matches;
-        for (int i = 1; i < currentTable.Rows.Count; i++)
-        {
-            var cell = currentTable.Rows[i][idColumnIndex]?.ToString() ?? "";
-            if (!string.IsNullOrEmpty(cell) &&
-                (cell.EndsWith(partialId, StringComparison.Ordinal)
-                  || cell.Contains(partialId)))
-            {
-                matches.Add(i);
-            }
-        }
-        return matches;
+        var cell = currentTable.Rows[i][idColumnIndex]?.ToString() ?? "";
+        if (cell.Contains(partialId) || cell.EndsWith(partialId, StringComparison.Ordinal))
+            matches.Add(i);
     }
+    return matches;
+}
+
 
     /// <summary>
     /// Returns zero-based sheet row indices whose Column1 contains the given name fragment.
     /// </summary>
-    public List<int> FindRowsByPartialName(string nameFragment, int nameColumnIndex = 1)
+    /// <summary>
+/// Fallback to use the configured nameColumnIndex.
+/// </summary>
+public List<int> FindRowsByPartialName(string fragment)
+    => FindRowsByPartialName(fragment, nameColumnIndex);
+
+/// <summary>
+/// Full fuzzy‐search implementation, with an explicit column index.
+/// </summary>
+public List<int> FindRowsByPartialName(string nameFragment, int nameColumnIndex)
+{
+    var results = new List<int>();
+    var fuzzy   = new List<(int row, int dist)>();
+    if (currentTable == null) return results;
+
+    // 1) Normalize the fragment
+    string cleanFrag = CleanString(nameFragment);
+
+    // 2) Dynamically pick a max distance:
+    int dynamicMax = Math.Min(6, Math.Max(1, (int)Math.Ceiling(cleanFrag.Length * 0.5)));
+
+    for (int i = startRowIndex; i < currentTable.Rows.Count; i++)
     {
-        var results = new List<int>();
-        var fuzzy = new List<(int row, int dist)>();
-        if (currentTable == null) return results;
+        string raw  = currentTable.Rows[i][nameColumnIndex]?.ToString() ?? "";
+        string cell = CleanString(raw);
 
-        // 1) Normalize the fragment
-        string cleanFrag = CleanString(nameFragment);
-
-        // 2) Dynamically pick a max distance:
-        //    - At least 1, up to 6
-        //    - E.g. half the fragment length, capped at 6
-        int dynamicMax = Math.Min(6, Math.Max(1, (int)Math.Ceiling(cleanFrag.Length * 0.5)));
-
-        for (int i = 1; i < currentTable.Rows.Count; i++)
+        if (cell.Contains(cleanFrag))
+            results.Add(i);
+        else
         {
-            string raw = currentTable.Rows[i][nameColumnIndex]?.ToString() ?? "";
-            string cell = CleanString(raw);
-
-            if (cell.Contains(cleanFrag))
-            {
-                // exact substring hit
-                results.Add(i);
-            }
-            else
-            {
-                int d = ComputeLevenshteinDistance(cell, cleanFrag);
-                if (d <= dynamicMax)
-                    fuzzy.Add((i, d));
-            }
+            int d = ComputeLevenshteinDistance(cell, cleanFrag);
+            if (d <= dynamicMax) fuzzy.Add((i, d));
         }
-
-        // 3) Append fuzzy matches in order of closeness
-        foreach (var pair in fuzzy.OrderBy(x => x.dist))
-            results.Add(pair.row);
-
-        return results;
     }
+
+    // 3) Append fuzzy matches sorted by closeness
+    foreach (var pair in fuzzy.OrderBy(x => x.dist))
+        results.Add(pair.row);
+
+    return results;
+}
+
 
     private static string CleanString(string input)
     {
