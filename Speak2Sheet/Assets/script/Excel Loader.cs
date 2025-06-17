@@ -125,18 +125,23 @@ public class ExcelLoader : MonoBehaviour
     }
 
     private void ShowFileDialog()
-    {
-        FileBrowser.ShowLoadDialog(
-            paths => LoadAndDisplayExcel(paths[0]),
-            () => Debug.Log("Excel load canceled"),
-            FileBrowser.PickMode.Files,
-            false,
-            null,
-            null,
-            "Select Excel File",
-            "Open"
-        );
-    }
+{
+    // ensure only Excel files are shown
+    FileBrowser.SetFilters(true, new FileBrowser.Filter("Excel Files", ".xls", ".xlsx"));
+    FileBrowser.SetDefaultFilter(".xlsx");
+    
+    FileBrowser.ShowLoadDialog(
+        paths => LoadAndDisplayExcel(paths[0]),
+        () => Debug.Log("Excel load canceled"),
+        FileBrowser.PickMode.Files,
+        false,
+        null,
+        null,
+        "Select Excel File",
+        "Open"
+    );
+}
+
 
     private void OnSaveButtonClicked()
     {
