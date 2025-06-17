@@ -13,6 +13,7 @@ using System.Text.RegularExpressions;
 using Debug = UnityEngine.Debug;
 using System.Linq;
 using System.Globalization;
+using SimpleFileBrowser;
 
 public class SpeechToTextManager : MonoBehaviour
 {
@@ -44,6 +45,10 @@ public class SpeechToTextManager : MonoBehaviour
     [SerializeField] private RectTransform resultsContent;   // content under a ScrollRect
     [SerializeField] private GameObject resultItemPrefab;    // a Button + TMP_Text for each candidate
 
+    [Header("Model Selection (optional)")]
+    [SerializeField] private Button selectModelButton;     // “Choose Model…” button
+    [SerializeField] private TMP_Text modelPathText;       // displays current model path
+
     private string whisperExePath;
     private string modelBinPath;
     private string grammarFilePath;
@@ -68,7 +73,41 @@ public class SpeechToTextManager : MonoBehaviour
         // hide result list at start
         resultsPanel.SetActive(false);
         UpdateUI();
+        // show default model path
+        modelPathText.text = Path.GetFileName(modelBinPath);
+
+        // wire up the user-override button
+        selectModelButton.onClick.AddListener(OnSelectModelClicked);
     }
+
+    private void OnSelectModelClicked()
+{
+    // ensure only .bin model files are shown
+    FileBrowser.SetFilters(true, new FileBrowser.Filter("Whisper Models", ".bin"));
+    FileBrowser.SetDefaultFilter(".bin");
+    
+    FileBrowser.ShowLoadDialog(
+        paths =>
+        {
+            string chosen = paths[0];
+            if (File.Exists(chosen))
+            {
+                modelBinPath = chosen;
+                modelPathText.text = Path.GetFileName(chosen);
+                Debug.Log($"[Whisper] User selected model: {chosen}");
+            }
+        },
+        () => Debug.Log("[Whisper] Model selection canceled"),
+        FileBrowser.PickMode.Files,
+        false,
+        null,
+        null,
+        "Select Whisper Model",
+        "Use"
+    );
+}
+
+
 
     private void InitializeWhisperPaths()
     {
