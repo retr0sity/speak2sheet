@@ -10,12 +10,14 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: bbb281ee3bf0b054c82ac2347e9e782c, type: 3}
-  m_Name: Localization-Assets-Shared
+  m_Name: MyLocalizationTables
   m_EditorClassIdentifier: 
-  m_GroupName: Localization-Assets-Shared
-  m_GUID: 48ea519c9d01ef70d9a8824c93e809b9
+  m_GroupName: MyLocalizationTables
+  m_GUID: bd35687f610f89846bc464ccae20f597
   m_SerializeEntries: []
-  m_ReadOnly: 1
+  m_ReadOnly: 0
   m_Settings: {fileID: 11400000, guid: 745567231b0afa88e86613980c634318, type: 2}
   m_SchemaSet:
-    m_Schemas: []
+    m_Schemas:
+    - {fileID: 11400000, guid: bf0eb34abeae58b4e87aacce02ad0196, type: 2}
+    - {fileID: 11400000, guid: 69ee45d84b271644384899f1607d9c07, type: 2}

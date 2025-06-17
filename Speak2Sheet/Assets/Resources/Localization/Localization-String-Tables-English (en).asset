@@ -10,11 +10,17 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: bbb281ee3bf0b054c82ac2347e9e782c, type: 3}
-  m_Name: Localization-Assets-Shared
+  m_Name: Localization-String-Tables-English (en)
   m_EditorClassIdentifier: 
-  m_GroupName: Localization-Assets-Shared
-  m_GUID: 48ea519c9d01ef70d9a8824c93e809b9
-  m_SerializeEntries: []
+  m_GroupName: Localization-String-Tables-English (en)
+  m_GUID: 73d1c0251c2e8bac2abeb5899889e7f8
+  m_SerializeEntries:
+  - m_GUID: f93ff0b37569ccd94b38e8b791967381
+    m_Address: UIStrings_en
+    m_ReadOnly: 1
+    m_SerializedLabels:
+    - Locale-en
+    FlaggedDuringContentUpdateRestriction: 0
   m_ReadOnly: 1
   m_Settings: {fileID: 11400000, guid: 745567231b0afa88e86613980c634318, type: 2}
   m_SchemaSet:
