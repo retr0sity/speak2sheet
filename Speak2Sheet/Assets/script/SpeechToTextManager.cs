@@ -468,7 +468,7 @@ foreach (var row in matches)
         return;
     }
 
-    excelLoader.UpdateCell(selectedRowIndex, 7, grade);
+    excelLoader.UpdateCell(selectedRowIndex, excelLoader.GradeColumnIndex, grade);
     statusText.text = $"Wrote grade {grade}";
     Debug.Log($"[Whisper] Set grade for row {selectedRowIndex} to {grade}");
 
