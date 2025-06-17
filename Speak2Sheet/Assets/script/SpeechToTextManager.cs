@@ -502,8 +502,8 @@ foreach (var row in matches)
 
     if (string.IsNullOrEmpty(grade))
     {
-        ShowError($"Could not parse grade from '{transcript}'");
-        currentMode = Mode.SelectingEntry;
+        statusText.text = "Couldn’t understand grade, please try again";
+        // stay in RecordingGrade so the next Record click will try again
         return;
     }
 
