@@ -1,0 +1,92 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5b11a58205ec3474ca216360e9fa74a8, type: 3}
+  m_Name: SpeechToTextUI Shared Data
+  m_EditorClassIdentifier: 
+  m_TableCollectionName: SpeechToTextUI
+  m_TableCollectionNameGuidString: 9d3dced3b00b11749a1824f7cd828c0e
+  m_Entries:
+  - m_Id: 416061878272
+    m_Key: start
+    m_Metadata:
+      m_Items: []
+  - m_Id: 416061878273
+    m_Key: stop
+    m_Metadata:
+      m_Items: []
+  - m_Id: 416061878274
+    m_Key: idle
+    m_Metadata:
+      m_Items: []
+  - m_Id: 416061878275
+    m_Key: listening
+    m_Metadata:
+      m_Items: []
+  - m_Id: 416066072576
+    m_Key: saving
+    m_Metadata:
+      m_Items: []
+  - m_Id: 416066072577
+    m_Key: transcription
+    m_Metadata:
+      m_Items: []
+  - m_Id: 416066072578
+    m_Key: done
+    m_Metadata:
+      m_Items: []
+  - m_Id: 416066072579
+    m_Key: select
+    m_Metadata:
+      m_Items: []
+  - m_Id: 416066072580
+    m_Key: tryagain
+    m_Metadata:
+      m_Items: []
+  - m_Id: 416066072581
+    m_Key: wrote
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3088483643392
+    m_Key: cancel
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4771246796800
+    m_Key: mic_missing
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4927157465088
+    m_Key: no_audio
+    m_Metadata:
+      m_Items: []
+  - m_Id: 5007725850624
+    m_Key: transcription_failed
+    m_Metadata:
+      m_Items: []
+  - m_Id: 5155818336256
+    m_Key: no_results
+    m_Metadata:
+      m_Items: []
+  - m_Id: 5331224129536
+    m_Key: error
+    m_Metadata:
+      m_Items: []
+  m_Metadata:
+    m_Items: []
+  m_KeyGenerator:
+    rid: 8456247619603923145
+  references:
+    version: 2
+    RefIds:
+    - rid: 8456247619603923145
+      type: {class: DistributedUIDGenerator, ns: UnityEngine.Localization.Tables, asm: Unity.Localization}
+      data:
+        m_CustomEpoch: 1750362634953
