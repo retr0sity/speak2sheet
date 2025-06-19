@@ -78,6 +78,10 @@ MonoBehaviour:
     m_Localized: 'Current Model:'
     m_Metadata:
       m_Items: []
+  - m_Id: 1499819564761088
+    m_Localized: Open Files
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []

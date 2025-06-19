@@ -83,6 +83,10 @@ MonoBehaviour:
     m_Localized: "\u03A4\u03C1\u03AD\u03C7\u03C9\u03BD \u039C\u03BF\u03BD\u03C4\u03B5\u03BB\u03BF:"
     m_Metadata:
       m_Items: []
+  - m_Id: 1499819564761088
+    m_Localized: "\u0386\u03BD\u03BF\u03B9\u03B3\u03BC\u03B1 \u0391\u03C1\u03C7\u03B5\u03AF\u03C9\u03BD"
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []
