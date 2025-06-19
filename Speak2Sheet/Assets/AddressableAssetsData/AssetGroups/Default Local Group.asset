@@ -32,27 +32,10 @@ MonoBehaviour:
     m_SerializedLabels:
     - Locale
     FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 6a4177412360977deb96e9c34575b5ee
-    m_Address: Assets/Locales/UIStrings/UIStrings Shared Data.asset
-    m_ReadOnly: 0
-    m_SerializedLabels: []
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: cac3863d2313c6a958045d2190f0f9c7
-    m_Address: UIStrings_el
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Locale-el
-    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: e0ed5eccf7967fbba93bf0443d6e26d2
     m_Address: Assets/Locales/UIStrings/UIStrings.asset
     m_ReadOnly: 0
     m_SerializedLabels: []
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: f93ff0b37569ccd94b38e8b791967381
-    m_Address: UIStrings_en
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Locale-en
     FlaggedDuringContentUpdateRestriction: 0
   m_ReadOnly: 0
   m_Settings: {fileID: 11400000, guid: 745567231b0afa88e86613980c634318, type: 2}

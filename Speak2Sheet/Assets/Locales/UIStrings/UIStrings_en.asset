@@ -47,7 +47,35 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 416464208687104
-    m_Localized: Autosave
+    m_Localized: 'Autosave:'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1490733846659072
+    m_Localized: 'Toggle the Language:'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1491058758418432
+    m_Localized: 'ID Column:'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1491966913314816
+    m_Localized: 'Names Column:'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1492132491853824
+    m_Localized: 'Grades Column:'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1492433819041792
+    m_Localized: 'Choose which of the Excel columns should appear in the UI:'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1493152601112576
+    m_Localized: 'Change the AI model:'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1493358881177600
+    m_Localized: 'Current Model:'
     m_Metadata:
       m_Items: []
   references:
