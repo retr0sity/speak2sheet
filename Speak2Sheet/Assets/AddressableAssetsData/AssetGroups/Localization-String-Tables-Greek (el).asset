@@ -14,14 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_GroupName: Localization-String-Tables-Greek (el)
   m_GUID: e9f0171c9580f402aadd7340315fa19b
-  m_SerializeEntries:
-  - m_GUID: 59e1582448570854d99392443caee643
-    m_Address: SpeechToTextUI_el
-    m_ReadOnly: 1
-    m_SerializedLabels:
-    - Locale-el
-    - Preload
-    FlaggedDuringContentUpdateRestriction: 0
+  m_SerializeEntries: []
   m_ReadOnly: 1
   m_Settings: {fileID: 11400000, guid: 745567231b0afa88e86613980c634318, type: 2}
   m_SchemaSet:
