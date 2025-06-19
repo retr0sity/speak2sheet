@@ -3796,7 +3796,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &650306219
 RectTransform:
   m_ObjectHideFlags: 0
@@ -10050,7 +10050,6 @@ GameObject:
   - component: {fileID: 1564360858}
   - component: {fileID: 1564360861}
   - component: {fileID: 1564360860}
-  - component: {fileID: 1564360859}
   m_Layer: 0
   m_Name: Label
   m_TagString: Untagged
@@ -10074,49 +10073,9 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 138.397, y: -0.0000333786}
-  m_SizeDelta: {x: 212.191, y: 16.988}
+  m_AnchoredPosition: {x: 22.066696, y: -0.0000333786}
+  m_SizeDelta: {x: -20.4696, y: 16.988}
   m_Pivot: {x: 0.5, y: 0.5}
---- !u!114 &1564360859
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1564360857}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 56eb0353ae6e5124bb35b17aff880f16, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  m_StringReference:
-    m_TableReference:
-      m_TableCollectionName: GUID:6a4177412360977deb96e9c34575b5ee
-    m_TableEntryReference:
-      m_KeyId: 416464208687104
-      m_Key: 
-    m_FallbackState: 0
-    m_WaitForCompletion: 0
-    m_LocalVariables: []
-  m_FormatArguments: []
-  m_UpdateString:
-    m_PersistentCalls:
-      m_Calls:
-      - m_Target: {fileID: 1564360860}
-        m_TargetAssemblyTypeName: UnityEngine.UI.Text, UnityEngine.UI
-        m_MethodName: set_text
-        m_Mode: 0
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: 
-          m_BoolArgument: 0
-        m_CallState: 2
-  references:
-    version: 2
-    RefIds: []
 --- !u!114 &1564360860
 MonoBehaviour:
   m_ObjectHideFlags: 0
