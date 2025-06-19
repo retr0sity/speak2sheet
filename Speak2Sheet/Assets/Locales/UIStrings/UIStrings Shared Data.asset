@@ -47,6 +47,38 @@ MonoBehaviour:
     m_Key: ID_Autosave
     m_Metadata:
       m_Items: []
+  - m_Id: 1490733846659072
+    m_Key: ID_TEXT_Toggle_Lang
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1491058758418432
+    m_Key: ID_Column
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1491966913314816
+    m_Key: ID_Names
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1492132491853824
+    m_Key: ID_Grades
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1492433819041792
+    m_Key: ID_ColumnChange
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1493152601112576
+    m_Key: ID_ChangeModel
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1493358881177600
+    m_Key: ID_Curr_Model
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1499819564761088
+    m_Key: ID_ChangeModel_button
+    m_Metadata:
+      m_Items: []
   m_Metadata:
     m_Items: []
   m_KeyGenerator:

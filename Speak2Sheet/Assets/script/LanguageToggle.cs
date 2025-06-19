@@ -14,6 +14,11 @@ public class LanguageToggle : MonoBehaviour
 
     private void Awake()
     {
+
+        Debug.Log($"Available locales: {LocalizationSettings.AvailableLocales.Locales.Count}");
+foreach (var loc in LocalizationSettings.AvailableLocales.Locales)
+    Debug.Log($" • {loc.Identifier.Code}");
+
         // 1. Load saved language preference (if any)
         string savedCode = PlayerPrefs.GetString(PREF_KEY, "en");
         SetLocaleImmediate(savedCode);
