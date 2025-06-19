@@ -4376,6 +4376,18 @@ MonoBehaviour:
   resultItemPrefab: {fileID: 1113424136}
   selectModelButton: {fileID: 350523361}
   modelPathText: {fileID: 448453598}
+  transcribingMessage:
+    m_TableReference:
+      m_TableCollectionName: GUID:9d3dced3b00b11749a1824f7cd828c0e
+    m_TableEntryReference:
+      m_KeyId: 416066072577
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  references:
+    version: 2
+    RefIds: []
 --- !u!4 &691229123
 Transform:
   m_ObjectHideFlags: 0

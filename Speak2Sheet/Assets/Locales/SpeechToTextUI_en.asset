@@ -1,0 +1,87 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e9620f8c34305754d8cc9a7e49e852d9, type: 3}
+  m_Name: SpeechToTextUI_en
+  m_EditorClassIdentifier: 
+  m_LocaleId:
+    m_Code: en
+  m_SharedData: {fileID: 11400000, guid: 9d3dced3b00b11749a1824f7cd828c0e, type: 2}
+  m_Metadata:
+    m_Items: []
+  m_TableData:
+  - m_Id: 416061878272
+    m_Localized: Start Recording
+    m_Metadata:
+      m_Items: []
+  - m_Id: 416061878273
+    m_Localized: Stop Recording
+    m_Metadata:
+      m_Items: []
+  - m_Id: 416061878274
+    m_Localized: Idle
+    m_Metadata:
+      m_Items: []
+  - m_Id: 416061878275
+    m_Localized: Listening...
+    m_Metadata:
+      m_Items: []
+  - m_Id: 416066072576
+    m_Localized: Saving audio...
+    m_Metadata:
+      m_Items: []
+  - m_Id: 416066072577
+    m_Localized: Transcribing...
+    m_Metadata:
+      m_Items: []
+  - m_Id: 416066072578
+    m_Localized: Done
+    m_Metadata:
+      m_Items: []
+  - m_Id: 416066072579
+    m_Localized: Select the right entry
+    m_Metadata:
+      m_Items: []
+  - m_Id: 416066072580
+    m_Localized: "Couldn\u2019t understand grade, please try again"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 416066072581
+    m_Localized: Wrote grade
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3088483643392
+    m_Localized: Canceled
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4771246796800
+    m_Localized: No microphone detected
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4927157465088
+    m_Localized: No audio was recorded
+    m_Metadata:
+      m_Items: []
+  - m_Id: 5007725850624
+    m_Localized: 'Transcription failed: {0}'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 5155818336256
+    m_Localized: No entries found for "{0}"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 5331224129536
+    m_Localized: Error
+    m_Metadata:
+      m_Items: []
+  references:
+    version: 2
+    RefIds: []

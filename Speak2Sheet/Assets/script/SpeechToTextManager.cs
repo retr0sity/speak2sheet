@@ -14,6 +14,9 @@ using Debug = UnityEngine.Debug;
 using System.Linq;
 using System.Globalization;
 using SimpleFileBrowser;
+using UnityEngine.Localization;
+using UnityEngine.Localization.Settings;
+
 
 public class SpeechToTextManager : MonoBehaviour
 {
@@ -35,7 +38,7 @@ public class SpeechToTextManager : MonoBehaviour
 
     [Header("Whisper Paths & Settings")]
     [SerializeField] private string grammarFileName = "grades.gbnf";
-    [SerializeField] [Range(0, 200)] private int grammarPenalty = 100;
+    [SerializeField][Range(0, 200)] private int grammarPenalty = 100;
 
     [Header("Excel Integration")]
     [SerializeField] private ExcelLoader excelLoader;
@@ -49,6 +52,10 @@ public class SpeechToTextManager : MonoBehaviour
     [SerializeField] private Button selectModelButton;     // “Choose Model…” button
     [SerializeField] private TMP_Text modelPathText;       // displays current model path
 
+    [Header("Localized Messages")]
+    [SerializeField] private LocalizedString transcribingMessage;
+
+
     private string whisperExePath;
     private string modelBinPath;
     private string grammarFilePath;
@@ -58,8 +65,10 @@ public class SpeechToTextManager : MonoBehaviour
     private CancellationTokenSource cts;
     private Mode currentMode = Mode.SelectingEntry;
     private int selectedRowIndex = -1;
+    private string currentStatusKey = "Idle"; // or "Listening", etc.
 
-    
+
+
 
     private void Awake()
     {
@@ -69,6 +78,8 @@ public class SpeechToTextManager : MonoBehaviour
 
     private void Start()
     {
+        LocalizationSettings.SelectedLocaleChanged += OnLocaleChanged;
+
         recordButton.onClick.AddListener(OnRecordButtonClicked);
         // hide result list at start
         resultsPanel.SetActive(false);
@@ -80,32 +91,46 @@ public class SpeechToTextManager : MonoBehaviour
         selectModelButton.onClick.AddListener(OnSelectModelClicked);
     }
 
+    private string L(string key)
+    {
+        var table = LocalizationSettings.StringDatabase.GetTable("SpeechToTextUI");
+        if (table != null && table.GetEntry(key) != null)
+            return table.GetEntry(key).GetLocalizedString();
+        return key; // fallback
+    }
+
+    private void OnLocaleChanged(Locale newLocale)
+    {
+        UpdateUI(); // Will refresh status & button text based on new language
+    }
+
+
     private void OnSelectModelClicked()
-{
-    // ensure only .bin model files are shown
-    FileBrowser.SetFilters(true, new FileBrowser.Filter("Whisper Models", ".bin"));
-    FileBrowser.SetDefaultFilter(".bin");
-    
-    FileBrowser.ShowLoadDialog(
-        paths =>
-        {
-            string chosen = paths[0];
-            if (File.Exists(chosen))
+    {
+        // ensure only .bin model files are shown
+        FileBrowser.SetFilters(true, new FileBrowser.Filter("Whisper Models", ".bin"));
+        FileBrowser.SetDefaultFilter(".bin");
+
+        FileBrowser.ShowLoadDialog(
+            paths =>
             {
-                modelBinPath = chosen;
-                modelPathText.text = Path.GetFileName(chosen);
-                Debug.Log($"[Whisper] User selected model: {chosen}");
-            }
-        },
-        () => Debug.Log("[Whisper] Model selection canceled"),
-        FileBrowser.PickMode.Files,
-        false,
-        null,
-        null,
-        "Select Whisper Model",
-        "Use"
-    );
-}
+                string chosen = paths[0];
+                if (File.Exists(chosen))
+                {
+                    modelBinPath = chosen;
+                    modelPathText.text = Path.GetFileName(chosen);
+                    Debug.Log($"[Whisper] User selected model: {chosen}");
+                }
+            },
+            () => Debug.Log("[Whisper] Model selection canceled"),
+            FileBrowser.PickMode.Files,
+            false,
+            null,
+            null,
+            "Select Whisper Model",
+            "Use"
+        );
+    }
 
 
 
@@ -178,8 +203,8 @@ public class SpeechToTextManager : MonoBehaviour
 
     private void UpdateUI()
     {
-        recordButtonText.text = isRecording ? "Stop Recording" : "Start Recording";
-        statusText.text = isRecording ? "Listening..." : "Idle";
+        recordButtonText.text = isRecording ? L("stop") : L("start");
+        statusText.text = isRecording ? L("listening") : L("idle");
     }
 
     private void OnRecordButtonClicked()
@@ -194,7 +219,7 @@ public class SpeechToTextManager : MonoBehaviour
     {
         if (Microphone.devices.Length == 0)
         {
-            ShowError("No microphone detected.");
+            ShowError("mic_missing");
             return;
         }
         clip = Microphone.Start(null, false, maxDurationSec, sampleRate);
@@ -207,7 +232,7 @@ public class SpeechToTextManager : MonoBehaviour
 
         if (pos <= 0)
         {
-            ShowError("No audio was recorded.");
+            ShowError("no_audio");
             return;
         }
 
@@ -227,7 +252,7 @@ public class SpeechToTextManager : MonoBehaviour
         }
 
         string wavPath = Path.Combine(Application.persistentDataPath, "recording.wav");
-        statusText.text = "Saving audio...";
+        statusText.text = "saving";
         Task.Run(() => WriteWavFile(wavPath, mono, 1, sampleRate))
             .ContinueWith(_ => _ = TranscribeAsync(wavPath), TaskScheduler.FromCurrentSynchronizationContext());
     }
@@ -271,29 +296,37 @@ public class SpeechToTextManager : MonoBehaviour
     {
         cts?.Cancel();
         cts = new CancellationTokenSource();
-        statusText.text = "Transcribing...";
+        currentStatusKey = "Transcribing...";
+        transcribingMessage.StringChanged += value =>
+        {
+            if (currentStatusKey == "Transcribing...")
+                statusText.text = value;
+        };
+        transcribingMessage.RefreshString();
         try
         {
             string output = await RunWhisperProcessAsync(wavPath, cts.Token);
             var lines = new List<string>();
-            foreach (string line in output.Split(new[] {'\r','\n'}, StringSplitOptions.RemoveEmptyEntries))
+            foreach (string line in output.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries))
             {
                 var m = Regex.Match(line, @"^\[\d{2}:\d{2}:\d{2}\.\d+\s*-->\s*\d{2}:\d{2}:\d{2}\.\d+\]\s*(.+)$");
                 if (m.Success) lines.Add(m.Groups[1].Value.Trim());
             }
             string clean = string.Join(" ", lines);
             transcriptText.text = clean;
-            statusText.text = "Done";
+            statusText.text = "done";
             Debug.Log($"[Whisper] {clean}");
             ProcessTranscript(clean);
         }
         catch (OperationCanceledException)
         {
-            statusText.text = "Canceled";
+            statusText.text = "cancel";
         }
         catch (Exception e)
         {
-            ShowError($"Transcription failed: {e.Message}");
+            ShowError($"transcription_failed", e.Message);
+            // this is some of the most shit code ive ever written
+            currentStatusKey = "Idle";
         }
     }
 
@@ -340,7 +373,7 @@ public class SpeechToTextManager : MonoBehaviour
         }, token);
     }
 
-     private static readonly Dictionary<string, string> NumberMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+    private static readonly Dictionary<string, string> NumberMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
     {
         {"0","0"}, {"μηδέν","0"},
         {"1","1"}, {"ένα","1"},
@@ -373,43 +406,43 @@ public class SpeechToTextManager : MonoBehaviour
     };
 
     private string PreprocessTranscript(string transcript)
-{
-    // 1) Strip accents
-    transcript = transcript
-        .Normalize(NormalizationForm.FormD)
-        .Where(c => CharUnicodeInfo.GetUnicodeCategory(c) != UnicodeCategory.NonSpacingMark)
-        .Aggregate("", (s, c) => s + c);
-
-    // 2) Remove ALL punctuation except dot and whitespace
-    transcript = Regex.Replace(transcript, @"[^\p{L}\p{N}\.\s]+", " ");
-
-    // 3) Split on anything that’s not a letter, digit, or dot
-    var rawTokens = Regex
-        .Split(transcript.ToUpperInvariant(), @"[^\p{L}\p{N}\.]+")
-        .Where(t => t.Length > 0);
-
-    var digitTokens = new List<string>();
-
-    foreach (var tok in rawTokens)
     {
-        if (NumberMap.TryGetValue(tok, out var val))
-            digitTokens.Add(val);
-        else if (Regex.IsMatch(tok, @"^\d+(\.\d+)?$"))
-            digitTokens.Add(tok);
-        else if (tok.Any(char.IsDigit))
+        // 1) Strip accents
+        transcript = transcript
+            .Normalize(NormalizationForm.FormD)
+            .Where(c => CharUnicodeInfo.GetUnicodeCategory(c) != UnicodeCategory.NonSpacingMark)
+            .Aggregate("", (s, c) => s + c);
+
+        // 2) Remove ALL punctuation except dot and whitespace
+        transcript = Regex.Replace(transcript, @"[^\p{L}\p{N}\.\s]+", " ");
+
+        // 3) Split on anything that’s not a letter, digit, or dot
+        var rawTokens = Regex
+            .Split(transcript.ToUpperInvariant(), @"[^\p{L}\p{N}\.]+")
+            .Where(t => t.Length > 0);
+
+        var digitTokens = new List<string>();
+
+        foreach (var tok in rawTokens)
         {
-            var digitsOnly = Regex.Replace(tok, @"\D", "");
-            digitTokens.AddRange(digitsOnly.Select(c => c.ToString()));
+            if (NumberMap.TryGetValue(tok, out var val))
+                digitTokens.Add(val);
+            else if (Regex.IsMatch(tok, @"^\d+(\.\d+)?$"))
+                digitTokens.Add(tok);
+            else if (tok.Any(char.IsDigit))
+            {
+                var digitsOnly = Regex.Replace(tok, @"\D", "");
+                digitTokens.AddRange(digitsOnly.Select(c => c.ToString()));
+            }
         }
+
+        var all = string.Concat(digitTokens);
+        if (all.Length < 5) return "";
+
+        var id = all.Substring(0, 4);
+        var grade = all.Substring(4);
+        return $"{id} ΒΑΘΜΟΣ {grade}";
     }
-
-    var all = string.Concat(digitTokens);
-    if (all.Length < 5) return "";
-
-    var id    = all.Substring(0, 4);
-    var grade = all.Substring(4);
-    return $"{id} ΒΑΘΜΟΣ {grade}";
-}
 
 
     private void ProcessTranscript(string transcript)
@@ -423,63 +456,63 @@ public class SpeechToTextManager : MonoBehaviour
     private void HandleSelectionTranscript(string transcript)
     {
         // ——————————————————————————————————————————
-    // 1) Clean the incoming string: remove ALL punctuation
-    //    (this will turn "Ανδρεαδης!" → "Ανδρεαδης")
-    var clean = Regex.Replace(transcript, @"[^\p{L}\p{N}\s\.]", "")   // keep letters, digits, whitespace, dot
-                     .Trim();
+        // 1) Clean the incoming string: remove ALL punctuation
+        //    (this will turn "Ανδρεαδης!" → "Ανδρεαδης")
+        var clean = Regex.Replace(transcript, @"[^\p{L}\p{N}\s\.]", "")   // keep letters, digits, whitespace, dot
+                         .Trim();
 
-    // (optionally lowercase so matching is case‐insensitive)
-    clean = clean.ToUpperInvariant();
+        // (optionally lowercase so matching is case‐insensitive)
+        clean = clean.ToUpperInvariant();
 
-    // 2) Now decide: is this digits or words?
-    var digitsOnly = Regex.Replace(clean, @"\D+", "");
-    List<int> matches;
-    if (!string.IsNullOrEmpty(digitsOnly))
-    {
-        // partial‐ID match
-        matches = excelLoader.FindRowsByPartialId(digitsOnly);
-    }
-    else
-    {
-        // partial‐name match
-        matches = excelLoader.FindRowsByPartialName(clean);
-    }
+        // 2) Now decide: is this digits or words?
+        var digitsOnly = Regex.Replace(clean, @"\D+", "");
+        List<int> matches;
+        if (!string.IsNullOrEmpty(digitsOnly))
+        {
+            // partial‐ID match
+            matches = excelLoader.FindRowsByPartialId(digitsOnly);
+        }
+        else
+        {
+            // partial‐name match
+            matches = excelLoader.FindRowsByPartialName(clean);
+        }
 
-    if (matches.Count == 0)
-    {
-        ShowError($"No entries found for “{clean}”");
-        return;
-    }
+        if (matches.Count == 0)
+        {
+            ShowError("no_results", clean);
+            return;
+        }
 
         // populate the scroll view
         // Clear out old items
-foreach (Transform t in resultsContent) 
-    Destroy(t.gameObject);
+        foreach (Transform t in resultsContent)
+            Destroy(t.gameObject);
 
-// Log how many we found
-Debug.Log($"[Results] Found {matches.Count} candidate rows");
+        // Log how many we found
+        Debug.Log($"[Results] Found {matches.Count} candidate rows");
 
-// For each match…
-foreach (var row in matches)
-{
-    // Instantiate as a child with local transform reset
-    var go = Instantiate(resultItemPrefab, resultsContent, false);
-    go.SetActive(true);
+        // For each match…
+        foreach (var row in matches)
+        {
+            // Instantiate as a child with local transform reset
+            var go = Instantiate(resultItemPrefab, resultsContent, false);
+            go.SetActive(true);
 
-    // Fill in the text
-    var txt = go.GetComponentInChildren<TMP_Text>();
-    string id   = excelLoader.GetCellValue(row, 0);
-    string name = excelLoader.GetCellValue(row, 1);
-    txt.text = $"{id} – {name}";
+            // Fill in the text
+            var txt = go.GetComponentInChildren<TMP_Text>();
+            string id = excelLoader.GetCellValue(row, 0);
+            string name = excelLoader.GetCellValue(row, 1);
+            txt.text = $"{id} – {name}";
 
-    // Hook up the button (clear old listeners first)
-    var btn = go.GetComponent<Button>();
-    btn.onClick.RemoveAllListeners();
-    btn.onClick.AddListener(() => OnMatchSelected(row));
-}
+            // Hook up the button (clear old listeners first)
+            var btn = go.GetComponent<Button>();
+            btn.onClick.RemoveAllListeners();
+            btn.onClick.AddListener(() => OnMatchSelected(row));
+        }
 
         resultsPanel.SetActive(true);
-        statusText.text = "Select the right entry";
+        statusText.text = "select";
     }
 
     private void OnMatchSelected(int rowIndex)
@@ -496,67 +529,95 @@ foreach (var row in matches)
     }
 
     private void HandleGradeTranscript(string transcript)
-{
-    var grade = ExtractGradeOnly(transcript);
-    Debug.Log($"[Debug] extracted grade: '{grade}'");
-
-    if (string.IsNullOrEmpty(grade))
     {
-        statusText.text = "Couldn’t understand grade, please try again";
-        // stay in RecordingGrade so the next Record click will try again
-        return;
+        var grade = ExtractGradeOnly(transcript);
+        Debug.Log($"[Debug] extracted grade: '{grade}'");
+
+        if (string.IsNullOrEmpty(grade))
+        {
+            statusText.text = "tryagain";
+            // stay in RecordingGrade so the next Record click will try again
+            return;
+        }
+
+        excelLoader.UpdateCell(selectedRowIndex, excelLoader.GradeColumnIndex, grade);
+        statusText.text = $"{L("wrote")} {grade}";
+        Debug.Log($"[Whisper] Set grade for row {selectedRowIndex} to {grade}");
+
+        currentMode = Mode.SelectingEntry;
+        selectedRowIndex = -1;
     }
-
-    excelLoader.UpdateCell(selectedRowIndex, excelLoader.GradeColumnIndex, grade);
-    statusText.text = $"Wrote grade {grade}";
-    Debug.Log($"[Whisper] Set grade for row {selectedRowIndex} to {grade}");
-
-    currentMode = Mode.SelectingEntry;
-    selectedRowIndex = -1;
-}
 
 
     /// <summary>
-/// Cleans & returns the first numeric token (integer or decimal) from the transcript,
-/// or null if none found.
-/// </summary>
-private string ExtractGradeOnly(string transcript)
-{
-    // 1) strip accents (same as before)
-    transcript = transcript
-        .Normalize(NormalizationForm.FormD)
-        .Where(c => CharUnicodeInfo.GetUnicodeCategory(c) != UnicodeCategory.NonSpacingMark)
-        .Aggregate("", (s, c) => s + c);
-
-    // 2) remove all punctuation except dot and whitespace
-    transcript = Regex.Replace(transcript, @"[^\p{L}\p{N}\.\s]+", " ");
-
-    // 3) split on anything that’s not a letter, digit or dot
-    var tokens = Regex
-        .Split(transcript.ToUpperInvariant(), @"[^\p{L}\p{N}\.]+")
-        .Where(t => t.Length > 0);
-
-    foreach (var tok in tokens)
+    /// Cleans & returns the first numeric token (integer or decimal) from the transcript,
+    /// or null if none found.
+    /// </summary>
+    private string ExtractGradeOnly(string transcript)
     {
-        // drop any trailing dot (“3.” → “3”)
-        var candidate = tok.TrimEnd('.');
+        // 1) strip accents (same as before)
+        transcript = transcript
+            .Normalize(NormalizationForm.FormD)
+            .Where(c => CharUnicodeInfo.GetUnicodeCategory(c) != UnicodeCategory.NonSpacingMark)
+            .Aggregate("", (s, c) => s + c);
 
-        // 1) number‐words
-        if (NumberMap.TryGetValue(candidate, out var val))
-            return val;
+        // 2) remove all punctuation except dot and whitespace
+        transcript = Regex.Replace(transcript, @"[^\p{L}\p{N}\.\s]+", " ");
 
-        // 2) integer or decimal ("3" or "7.3")
-        if (Regex.IsMatch(candidate, @"^\d+(\.\d+)?$"))
-            return candidate;
+        // 3) split on anything that’s not a letter, digit or dot
+        var tokens = Regex
+            .Split(transcript.ToUpperInvariant(), @"[^\p{L}\p{N}\.]+")
+            .Where(t => t.Length > 0);
+
+        foreach (var tok in tokens)
+        {
+            // drop any trailing dot (“3.” → “3”)
+            var candidate = tok.TrimEnd('.');
+
+            // 1) number‐words
+            if (NumberMap.TryGetValue(candidate, out var val))
+                return val;
+
+            // 2) integer or decimal ("3" or "7.3")
+            if (Regex.IsMatch(candidate, @"^\d+(\.\d+)?$"))
+                return candidate;
+        }
+
+        return null;
     }
 
-    return null;
-}
 
-
-    private void ShowError(string message)
+    private void ShowError(string key, string arg = null)
     {
+        string message;
+
+        var stringTable = LocalizationSettings.StringDatabase.GetTable("SpeechToTextUI");
+        if (stringTable != null && stringTable.GetEntry(key) != null)
+        {
+            var entry = stringTable.GetEntry(key);
+            message = LocalizationSettings.StringDatabase.GetLocalizedString("SpeechToTextUI", key);
+
+            if (!string.IsNullOrEmpty(arg))
+                message = string.Format(message, arg);
+        }
+        else
+        {
+            // fallback if key is missing
+            message = !string.IsNullOrEmpty(arg) ? arg : key;
+        }
+
         Debug.LogError(message);
-        statusText.text = $"Error: {message}";
+        statusText.text = $"{GetLocalized("error")}: {message}";
     }
+    private string GetLocalized(string key)
+    {
+        return LocalizationSettings.StringDatabase.GetLocalizedString("SpeechToTextUI", key);
+    }
+
+    private void OnDestroy()
+    {
+        LocalizationSettings.SelectedLocaleChanged -= OnLocaleChanged;
+        transcribingMessage.StringChanged -= value => statusText.text = value;
+    }
+
 }
