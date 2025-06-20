@@ -30,6 +30,8 @@ public class ExcelLoader : MonoBehaviour
     [SerializeField] private int nameColumnIndex = 1;
 
     [SerializeField] private GameObject editableCellPrefab;
+    [SerializeField] private GameObject columnHeaderCellPrefab;
+    [SerializeField] private GameObject rowHeaderCellPrefab;
 
 
     public int NameColumnIndex => nameColumnIndex;
@@ -226,16 +228,61 @@ public class ExcelLoader : MonoBehaviour
     // 1) Clear old
     foreach (Transform child in gridContent) Destroy(child.gameObject);
 
-    // 2) Configure grid constraint ONCE
+    // 2) Configure grid to have one extra column for the row headers:
     var grid = gridContent.GetComponent<GridLayoutGroup>();
     grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
-    grid.constraintCount  = desiredColumns.Count;
+    grid.constraintCount = desiredColumns.Count + 1;  // +1 for the leftmost row‐header column
 
-    int rows = table.Rows.Count;
+    int totalRows = table.Rows.Count - startRowIndex;    // number of data rows
+    int totalCols = desiredColumns.Count;                // number of data columns
 
-    // 3) Spawn exactly one prefab per cell
-    for (int r = startRowIndex; r < rows; r++)
+    // 3) --- HEADER ROW ---
+   // 3a) Top‐left blank cell (corner of headers)
+var cornerGO = Instantiate(rowHeaderCellPrefab, gridContent);
+
+// 1) Hide its visuals…
+var img = cornerGO.GetComponent<Image>();
+if (img != null) img.enabled = false;
+
+var tmp = cornerGO.GetComponentInChildren<TextMeshProUGUI>();
+if (tmp != null)
+{
+    tmp.text = "";       // no text
+    tmp.raycastTarget = false;  // can’t block clicks
+}
+
+// 2) Make sure it doesn’t catch any clicks
+var btn = cornerGO.GetComponent<Button>();
+if (btn != null)
+{
+    btn.interactable = false;
+    var colors = btn.colors;
+    colors.disabledColor = new Color32(170, 170, 170, 255);
+    btn.colors = colors;
+}
+
+
+
+    // 3b) Column letters
+    for (int colIdx = 0; colIdx < totalCols; colIdx++)
     {
+        int sheetCol = desiredColumns[colIdx];
+        string letter = ColumnIndexToLetter(sheetCol);
+        Instantiate(columnHeaderCellPrefab, gridContent)
+            .GetComponent<CellController>()
+            .Initialize(-1, sheetCol, letter);
+    }
+
+    // 4) --- DATA ROWS ---
+    for (int r = startRowIndex; r < table.Rows.Count; r++)
+    {
+        int displayRowNumber = r - startRowIndex + 1; // 1‐based
+        // 4a) Row header
+        Instantiate(rowHeaderCellPrefab, gridContent)
+            .GetComponent<CellController>()
+            .Initialize(r, -1, displayRowNumber.ToString());
+
+        // 4b) Data cells
         foreach (int c in desiredColumns)
         {
             if (c < 0 || c >= table.Columns.Count) continue;
@@ -244,10 +291,20 @@ public class ExcelLoader : MonoBehaviour
             ctrl.Initialize(r, c, table.Rows[r][c]?.ToString());
         }
     }
+}
 
-    // 4) Force a single layout rebuild
-    //Canvas.ForceUpdateCanvases();
-    //LayoutRebuilder.ForceRebuildLayoutImmediate(gridContent);
+// Utility to convert a 0‐based column index into “A”, “B”, … “Z”, “AA”, etc.
+private string ColumnIndexToLetter(int columnIndex)
+{
+    // Excel‐style: 0 → A, 25 → Z, 26 → AA, etc.
+    var s = "";
+    while (columnIndex >= 0)
+    {
+        int rem = columnIndex % 26;
+        s = (char)('A' + rem) + s;
+        columnIndex = (columnIndex / 26) - 1;
+    }
+    return s;
 }
 
 
