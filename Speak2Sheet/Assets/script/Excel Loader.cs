@@ -32,6 +32,7 @@ public class ExcelLoader : MonoBehaviour
     [SerializeField] private GameObject editableCellPrefab;
     [SerializeField] private GameObject columnHeaderCellPrefab;
     [SerializeField] private GameObject rowHeaderCellPrefab;
+    [SerializeField] private GameObject placeholderCellPrefab;
 
 
     public int NameColumnIndex => nameColumnIndex;
@@ -225,78 +226,73 @@ public class ExcelLoader : MonoBehaviour
 
     private void PopulateGrid(DataTable table)
 {
-    // 1) Clear old
+    // 1) clear out old
     foreach (Transform child in gridContent) Destroy(child.gameObject);
 
-    // 2) Configure grid to have one extra column for the row headers:
+    // 2) tell GridLayoutGroup we want (N+1) columns
     var grid = gridContent.GetComponent<GridLayoutGroup>();
     grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
-    grid.constraintCount = desiredColumns.Count + 1;  // +1 for the leftmost row‐header column
+    grid.constraintCount = desiredColumns.Count + 1;
 
-    int totalRows = table.Rows.Count - startRowIndex;    // number of data rows
-    int totalCols = desiredColumns.Count;                // number of data columns
+    int dataRowStart = startRowIndex;
+    int dataRowCount = table.Rows.Count - dataRowStart;
 
-    // 3) --- HEADER ROW ---
-   // 3a) Top‐left blank cell (corner of headers)
-var cornerGO = Instantiate(rowHeaderCellPrefab, gridContent);
+    // --- HEADER ROW (y = –1) ---
 
-// 1) Hide its visuals…
-var img = cornerGO.GetComponent<Image>();
-if (img != null) img.enabled = false;
+    // 3a) corner cell placeholder
+    var corner = Instantiate(placeholderCellPrefab, gridContent);
+    
+    corner.GetComponentInChildren<TextMeshProUGUI>()?.SetText("");
 
-var tmp = cornerGO.GetComponentInChildren<TextMeshProUGUI>();
-if (tmp != null)
-{
-    tmp.text = "";       // no text
-    tmp.raycastTarget = false;  // can’t block clicks
-}
-
-// 2) Make sure it doesn’t catch any clicks
-var btn = cornerGO.GetComponent<Button>();
-if (btn != null)
-{
-    btn.interactable = false;
-    var colors = btn.colors;
-    colors.disabledColor = new Color32(170, 170, 170, 255);
-    btn.colors = colors;
-}
-
-
-
-    // 3b) Column letters
-    for (int colIdx = 0; colIdx < totalCols; colIdx++)
+    // 3b) column letters (or placeholders)
+    foreach (int c in desiredColumns)
     {
-        int sheetCol = desiredColumns[colIdx];
-        string letter = ColumnIndexToLetter(sheetCol);
-        Instantiate(columnHeaderCellPrefab, gridContent)
-            .GetComponent<CellController>()
-            .Initialize(-1, sheetCol, letter);
+        if (c >= 0 && c < table.Columns.Count)
+        {
+            // real header
+            string letter = ColumnIndexToLetter(c);
+            var hdr = Instantiate(columnHeaderCellPrefab, gridContent);
+            hdr.GetComponent<CellController>().Initialize(-1, c, letter);
+        }
+        else
+        {
+            // empty placeholder
+            var ph = Instantiate(placeholderCellPrefab, gridContent);
+            
+            ph.GetComponentInChildren<TextMeshProUGUI>()?.SetText("");
+        }
     }
 
-    // 4) --- DATA ROWS ---
-    for (int r = startRowIndex; r < table.Rows.Count; r++)
+    // --- DATA ROWS ---
+    for (int r = dataRowStart; r < table.Rows.Count; r++)
     {
-        int displayRowNumber = r - startRowIndex + 1; // 1‐based
-        // 4a) Row header
-        Instantiate(rowHeaderCellPrefab, gridContent)
-            .GetComponent<CellController>()
-            .Initialize(r, -1, displayRowNumber.ToString());
+        // 4a) row‐header (always exists)
+        int displayNumber = (r - dataRowStart) + 1;
+        var rowHdr = Instantiate(rowHeaderCellPrefab, gridContent);
+        rowHdr.GetComponent<CellController>().Initialize(r, -1, displayNumber.ToString());
 
-        // 4b) Data cells
+        // 4b) data columns or placeholders
         foreach (int c in desiredColumns)
         {
-            if (c < 0 || c >= table.Columns.Count) continue;
-            var cellGO = Instantiate(editableCellPrefab, gridContent);
-            var ctrl   = cellGO.GetComponent<CellController>();
-            ctrl.Initialize(r, c, table.Rows[r][c]?.ToString());
+            if (c >= 0 && c < table.Columns.Count)
+            {
+                var cellGO = Instantiate(editableCellPrefab, gridContent);
+                var ctrl   = cellGO.GetComponent<CellController>();
+                ctrl.Initialize(r, c, table.Rows[r][c]?.ToString());
+            }
+            else
+            {
+                // maintain alignment with a blank slot
+                var ph = Instantiate(placeholderCellPrefab, gridContent);
+                
+                ph.GetComponentInChildren<TextMeshProUGUI>()?.SetText("");
+            }
         }
     }
 }
 
-// Utility to convert a 0‐based column index into “A”, “B”, … “Z”, “AA”, etc.
 private string ColumnIndexToLetter(int columnIndex)
 {
-    // Excel‐style: 0 → A, 25 → Z, 26 → AA, etc.
     var s = "";
     while (columnIndex >= 0)
     {
