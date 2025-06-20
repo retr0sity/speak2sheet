@@ -30,7 +30,6 @@ public class SpeechToTextManager : MonoBehaviour
     [SerializeField] private Button recordButton;
     [SerializeField] private TMP_Text recordButtonText;
     [SerializeField] private TMP_Text statusText;
-    [SerializeField] private TMP_Text transcriptText;
 
     [Header("Recording Settings")]
     [SerializeField] private int sampleRate = 16000;
@@ -54,6 +53,7 @@ public class SpeechToTextManager : MonoBehaviour
 
     [Header("Localized Messages")]
     [SerializeField] private LocalizedString transcribingMessage;
+    [SerializeField] private LocalizedString selectMessage;
 
 
     private string whisperExePath;
@@ -79,6 +79,7 @@ public class SpeechToTextManager : MonoBehaviour
     private void Start()
     {
         LocalizationSettings.SelectedLocaleChanged += OnLocaleChanged;
+        selectMessage.StringChanged += OnSelectStringChanged;
 
         recordButton.onClick.AddListener(OnRecordButtonClicked);
         // hide result list at start
@@ -89,6 +90,10 @@ public class SpeechToTextManager : MonoBehaviour
 
         // wire up the user-override button
         selectModelButton.onClick.AddListener(OnSelectModelClicked);
+    }
+
+    private void OnSelectStringChanged(string localized) {
+        if (currentStatusKey == "select")        statusText.text = localized;
     }
 
     private string L(string key)
@@ -313,7 +318,6 @@ public class SpeechToTextManager : MonoBehaviour
                 if (m.Success) lines.Add(m.Groups[1].Value.Trim());
             }
             string clean = string.Join(" ", lines);
-            transcriptText.text = clean;
             statusText.text = "done";
             Debug.Log($"[Whisper] {clean}");
             ProcessTranscript(clean);
@@ -321,6 +325,7 @@ public class SpeechToTextManager : MonoBehaviour
         catch (OperationCanceledException)
         {
             statusText.text = "cancel";
+            currentStatusKey = "Idle";
         }
         catch (Exception e)
         {
@@ -375,28 +380,30 @@ public class SpeechToTextManager : MonoBehaviour
 
     private static readonly Dictionary<string, string> NumberMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
     {
-        {"0","0"}, {"μηδέν","0"},
-        {"1","1"}, {"ένα","1"},
-        {"2","2"}, {"δύο","2"},
-        {"3","3"}, {"τρία","3"},
-        {"4","4"}, {"τέσσερα","4"}, {"τεσσερα","4"},
+        {"κομμα", "."}, {"κομα", "."}, {"κωμμα", "."}, {"κωμα", "."}, {"κόμμα", "."}, {"κόμα", "."}, {"κώμμα", "."}, {"κώμα", "."},
+        {",", "."}, {".", "."},
+        { "0","0"}, {"μηδέν","0"}, {"μηδεν","0"},
+        {"1","1"}, {"ένα","1"}, {"ενα","1"},
+        {"2","2"}, {"δύο","2"}, {"δυο","2"}, {"βιώ","2"}, {"βιο","2"}, {"βιω", "2"},
+        {"3","3"}, {"τρία","3"}, {"τρια","3"}, {"τρι", "3"}, {"τριε", "3"},
+        {"4","4"}, {"τέσσερα","4"}, {"τεσσερα","4"}, {"τεσσερις","4"}, {"τεσερα","4"}, 
         {"5","5"}, {"πέντε","5"}, {"πεντε","5"},
-        {"6","6"}, {"έξι","6"}, {"εξι","6"},
-        {"7","7"}, {"εφτά","7"}, {"επτά","7"},
-        {"8","8"}, {"οκτώ","8"}, {"οκτω","8"},
-        {"9","9"}, {"εννέα","9"}, {"εννεα","9"},
+        {"6","6"}, {"έξι","6"}, {"εξι","6"}, {"εκσι","6"}, {"έκσι","6"},
+        {"7","7"}, {"εφτά","7"}, {"επτά","7"}, {"επτα","7"}, {"εφτα","7"}, {"ευτα","7"},
+        {"8","8"}, {"οκτώ","8"}, {"οκτω","8"}, {"οχτώ", "8"}, {"οχτω","8"},
+        {"9","9"}, {"εννέα","9"}, {"εννεα","9"}, {"εννια","9"}, {"εννιά","9"}, {"ενιά","9"}, {"ενια","9"},
         {"10","10"}, {"δέκα","10"}, {"δεκα","10"},
         {"11","11"}, {"έντεκα","11"}, {"εντεκα","11"},
-        {"12","12"}, {"δώδεκα","12"}, {"δουδεκα","12"},
+        {"12","12"}, {"δώδεκα","12"}, {"δουδεκα","12"}, {"δωδεκα","12"},
         {"13","13"}, {"δεκατρία","13"}, {"δεκατρια","13"},
         {"14","14"}, {"δεκατέσσερα","14"}, {"δεκατεσσερα","14"},
         {"15","15"}, {"δεκαπέντε","15"}, {"δεκαπεντε","15"},
         {"16","16"}, {"δεκαέξι","16"}, {"δεκαεξι","16"},
-        {"17","17"}, {"δεκαεπτά","17"}, {"δεκαεφτα","17"},
-        {"18","18"}, {"δεκαοκτώ","18"}, {"δεκαοκτω","18"},
-        {"19","19"}, {"δεκαεννιά","19"}, {"δεκαεννια","19"},
+        {"17","17"}, {"δεκαεπτά","17"}, {"δεκαεφτα","17"}, {"δεκαεπτα","17"}, {"δεκαεφτά", "17"},
+        {"18","18"}, {"δεκαοκτώ","18"}, {"δεκαοκτω","18"}, {"δεκαοχτώ","18"}, {"δεκαοχτω","18"},
+        {"19","19"}, {"δεκαεννιά","19"}, {"δεκαεννια","19"}, {"δεκαεννέα","19"}, {"δεκαεννεα","19"},
         {"20","20"}, {"είκοσι","20"}, {"εικοσι","20"},
-        {"30","30"}, {"τριάντα","30"}, {"τριαντα","30"},
+        {"30","30"}, {"τριάντα","30"}, {"τριαντα","30"}, {"τριάτα","30"}, {"τριατα","30"},
         {"40","40"}, {"σαράντα","40"}, {"σαραντα","40"},
         {"50","50"}, {"πενήντα","50"}, {"πενηντα","50"},
         {"60","60"}, {"εξήντα","60"}, {"εξηντα","60"},
@@ -405,48 +412,46 @@ public class SpeechToTextManager : MonoBehaviour
         {"90","90"}, {"ενενήντα","90"}, {"ενενηντα","90"}
     };
 
-    private string PreprocessTranscript(string transcript)
+    /// <summary>
+/// Turns a transcript of Greek number‐words (and mixed digits) into one digit string.
+/// E.g. "ένα τριάντα εφτά" => "137", "2.30.1" => "2301"
+/// </summary>
+    private string ExtractIdDigits(string transcript)
     {
-        // 1) Strip accents
+        // 1) strip accents
         transcript = transcript
-            .Normalize(NormalizationForm.FormD)
-            .Where(c => CharUnicodeInfo.GetUnicodeCategory(c) != UnicodeCategory.NonSpacingMark)
-            .Aggregate("", (s, c) => s + c);
+        .Normalize(NormalizationForm.FormD)
+        .Where(c => CharUnicodeInfo.GetUnicodeCategory(c) != UnicodeCategory.NonSpacingMark)
+        .Aggregate("", (s, c) => s + c);
 
-        // 2) Remove ALL punctuation except dot and whitespace
-        transcript = Regex.Replace(transcript, @"[^\p{L}\p{N}\.\s]+", " ");
+        // 2) split on anything but letters, digits or dot
+        var tokens = Regex
+        .Split(transcript.ToUpperInvariant(), @"[^\p{L}\p{N}\.]+")
+        .Where(t => t.Length > 0);
 
-        // 3) Split on anything that’s not a letter, digit, or dot
-        var rawTokens = Regex
-            .Split(transcript.ToUpperInvariant(), @"[^\p{L}\p{N}\.]+")
-            .Where(t => t.Length > 0);
-
-        var digitTokens = new List<string>();
-
-        foreach (var tok in rawTokens)
+        var digitChars = new List<string>();
+        foreach (var tok in tokens)
         {
-            if (NumberMap.TryGetValue(tok, out var val))
-                digitTokens.Add(val);
-            else if (Regex.IsMatch(tok, @"^\d+(\.\d+)?$"))
-                digitTokens.Add(tok);
-            else if (tok.Any(char.IsDigit))
+            // A) exact digits or decimals → strip non‐digits
+            if (Regex.IsMatch(tok, @"^\d+(\.\d+)?$"))
             {
-                var digitsOnly = Regex.Replace(tok, @"\D", "");
-                digitTokens.AddRange(digitsOnly.Select(c => c.ToString()));
+                // remove dots for ID
+                digitChars.AddRange( tok.Where(char.IsDigit).Select(c=>c.ToString()) );
+            }
+            // B) number‐words → map via NumberMap
+            else if (NumberMap.TryGetValue(tok, out var val))
+            {
+                digitChars.Add(val);
             }
         }
 
-        var all = string.Concat(digitTokens);
-        if (all.Length < 5) return "";
-
-        var id = all.Substring(0, 4);
-        var grade = all.Substring(4);
-        return $"{id} ΒΑΘΜΟΣ {grade}";
+        return string.Concat(digitChars);
     }
 
 
     private void ProcessTranscript(string transcript)
     {
+        currentStatusKey = "Idle";
         if (currentMode == Mode.SelectingEntry)
             HandleSelectionTranscript(transcript);
         else
@@ -455,28 +460,32 @@ public class SpeechToTextManager : MonoBehaviour
 
     private void HandleSelectionTranscript(string transcript)
     {
-        // ——————————————————————————————————————————
-        // 1) Clean the incoming string: remove ALL punctuation
-        //    (this will turn "Ανδρεαδης!" → "Ανδρεαδης")
-        var clean = Regex.Replace(transcript, @"[^\p{L}\p{N}\s\.]", "")   // keep letters, digits, whitespace, dot
-                         .Trim();
+        // 1) strip all punctuation except dot & whitespace, uppercase:
+        var clean = Regex
+            .Replace(transcript, @"[^\p{L}\p{N}\s\.]", " ")
+            .Trim()
+            .ToUpperInvariant();
 
-        // (optionally lowercase so matching is case‐insensitive)
-        clean = clean.ToUpperInvariant();
-
-        // 2) Now decide: is this digits or words?
-        var digitsOnly = Regex.Replace(clean, @"\D+", "");
+        // 2) extract any digits or number-words from the cleaned string:
+        var idQuery = ExtractIdDigits(transcript);
+        idQuery = Regex.Replace(idQuery, @"\D+", "");
         List<int> matches;
-        if (!string.IsNullOrEmpty(digitsOnly))
+
+        if (!string.IsNullOrEmpty(idQuery))
         {
-            // partial‐ID match
-            matches = excelLoader.FindRowsByPartialId(digitsOnly);
+            // exact/partial
+            matches = excelLoader.FindRowsByPartialId(idQuery);
+            // if none, use fuzzy with our looser threshold
+            if (matches.Count == 0)
+                matches = excelLoader.FindRowsByFuzzyId(idQuery);
         }
         else
         {
-            // partial‐name match
-            matches = excelLoader.FindRowsByPartialName(clean);
+            // name lookup…
+            matches = excelLoader.FindRowsByPartialName(transcript);
         }
+
+
 
         if (matches.Count == 0)
         {
@@ -512,7 +521,8 @@ public class SpeechToTextManager : MonoBehaviour
         }
 
         resultsPanel.SetActive(true);
-        statusText.text = "select";
+        currentStatusKey = "select";
+        selectMessage.RefreshString();
     }
 
     private void OnMatchSelected(int rowIndex)
@@ -554,37 +564,93 @@ public class SpeechToTextManager : MonoBehaviour
     /// or null if none found.
     /// </summary>
     private string ExtractGradeOnly(string transcript)
+{
+    // 0) first look for an explicit digit‐dot‐digit or digit‐comma‐digit sequence:
+    //    e.g. “3.2”, “3,2”, “3 , 2”
+    var m0 = Regex.Match(transcript, @"\b(\d+)[\.,]\s*(\d+)\b");
+    if (m0.Success)
+        return $"{m0.Groups[1].Value}.{m0.Groups[2].Value}";
+
+    // 1) strip accents
+    transcript = transcript
+      .Normalize(NormalizationForm.FormD)
+      .Where(c => CharUnicodeInfo.GetUnicodeCategory(c) != UnicodeCategory.NonSpacingMark)
+      .Aggregate("", (s, c) => s + c);
+
+    // 2) remove unwanted punctuation
+    transcript = Regex.Replace(transcript, @"[^\p{L}\p{N}\.\s]+", " ");
+
+    // 3) uppercase
+    transcript = transcript.ToUpperInvariant();
+
+    // 3.5) isolate ΚΟΜΜΑ/ΚΟΜΑ when glued to words
+    transcript = Regex.Replace(transcript,
+        @"(?<=\p{L})(ΚΟΜΜΑ|ΚΟΜΑ)(?=\p{L})",
+        " $1 ");
+
+    // 4) split on whitespace
+    var rough = transcript
+        .Split(new[]{' ','\t','\n','\r'}, StringSplitOptions.RemoveEmptyEntries);
+
+    // 5) break apart any remaining glued ΚΟΜΜΑ+word tokens
+    var tokens = new List<string>();
+    foreach (var t in rough)
     {
-        // 1) strip accents (same as before)
-        transcript = transcript
-            .Normalize(NormalizationForm.FormD)
-            .Where(c => CharUnicodeInfo.GetUnicodeCategory(c) != UnicodeCategory.NonSpacingMark)
-            .Aggregate("", (s, c) => s + c);
-
-        // 2) remove all punctuation except dot and whitespace
-        transcript = Regex.Replace(transcript, @"[^\p{L}\p{N}\.\s]+", " ");
-
-        // 3) split on anything that’s not a letter, digit or dot
-        var tokens = Regex
-            .Split(transcript.ToUpperInvariant(), @"[^\p{L}\p{N}\.]+")
-            .Where(t => t.Length > 0);
-
-        foreach (var tok in tokens)
+        var m = Regex.Match(t, @"^(ΚΟΜΜΑ|ΚΟΜΑ)(.+)$");
+        if (m.Success)
         {
-            // drop any trailing dot (“3.” → “3”)
-            var candidate = tok.TrimEnd('.');
-
-            // 1) number‐words
-            if (NumberMap.TryGetValue(candidate, out var val))
-                return val;
-
-            // 2) integer or decimal ("3" or "7.3")
-            if (Regex.IsMatch(candidate, @"^\d+(\.\d+)?$"))
-                return candidate;
+            tokens.Add(m.Groups[1].Value);
+            tokens.Add(m.Groups[2].Value);
         }
-
-        return null;
+        else tokens.Add(t);
     }
+
+    // 6) split on non‐letter/digit/dot to get rawTokens
+    var rawTokens = tokens
+        .SelectMany(t => Regex.Split(t, @"[^\p{L}\p{N}\.]+"))
+        .Where(t => t.Length > 0)
+        .ToList();
+
+    // 7) look for number • ΚΟΜΜΑ • number
+    for (int i = 0; i < rawTokens.Count - 2; i++)
+    {
+        var w1 = NormalizeToken(rawTokens[i]);
+        var w2 = NormalizeToken(rawTokens[i + 1]);
+        var w3 = NormalizeToken(rawTokens[i + 2]);
+
+        if ((w2 == "ΚΟΜΜΑ" || w2 == "ΚΟΜΑ")
+            && NumberMap.TryGetValue(w1, out var intPart)
+            && NumberMap.TryGetValue(w3, out var decPart))
+        {
+            return $"{intPart}.{decPart}";
+        }
+    }
+
+    // 8) fallback single‐token
+    foreach (var raw in rawTokens)
+    {
+        var tok = NormalizeToken(raw);
+        if (NumberMap.TryGetValue(tok, out var val))
+            return val;
+        if (Regex.IsMatch(tok, @"^\d+(\.\d+)?$"))
+            return tok;
+    }
+
+    return null;
+}
+
+
+
+/// <summary>
+/// Strip non-alphanumeric from ends, e.g. "'3." -> "3"
+/// </summary>
+private string NormalizeToken(string t)
+{
+    return Regex.Replace(t, @"^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$", "");
+}
+
+
+
 
 
     private void ShowError(string key, string arg = null)
@@ -618,6 +684,7 @@ public class SpeechToTextManager : MonoBehaviour
     {
         LocalizationSettings.SelectedLocaleChanged -= OnLocaleChanged;
         transcribingMessage.StringChanged -= value => statusText.text = value;
+        selectMessage.StringChanged -= OnSelectStringChanged;
     }
 
 }
