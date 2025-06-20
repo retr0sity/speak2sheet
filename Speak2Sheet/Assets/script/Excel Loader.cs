@@ -15,6 +15,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using Org.BouncyCastle.Security;
 using System.Text;
+using System.Globalization;
 
 
 
@@ -27,6 +28,12 @@ public class ExcelLoader : MonoBehaviour
     [Header("Lookup Settings")]
     [Tooltip("Column index used when finding rows by Name")]
     [SerializeField] private int nameColumnIndex = 1;
+
+    [SerializeField] private GameObject editableCellPrefab;
+    [SerializeField] private GameObject columnHeaderCellPrefab;
+    [SerializeField] private GameObject rowHeaderCellPrefab;
+    [SerializeField] private GameObject placeholderCellPrefab;
+
 
     public int NameColumnIndex => nameColumnIndex;
 
@@ -49,13 +56,13 @@ public class ExcelLoader : MonoBehaviour
 
     [Header("Display Settings")]
     [Tooltip("Which column indices to show in the grid")]  
-    [SerializeField] private List<int> desiredColumns = new List<int> { 0, 1, 6, 7 };
+    [SerializeField] private List<int> desiredColumns = new List<int> { 1, 3, 6, 7 };
     [Tooltip("Start displaying from this row index (0-based, include header if needed)")]
     [SerializeField] private int startRowIndex = 1;
 
     [Header("Lookup Settings")]
     [Tooltip("Column index used when finding rows by ID")]  
-    [SerializeField] private int idColumnIndex = 0;
+    [SerializeField] private int idColumnIndex = 3;
     [Tooltip("Column index used for grades lookup")]  
     [SerializeField] private int gradeColumnIndex = 7;
 
@@ -218,32 +225,84 @@ public class ExcelLoader : MonoBehaviour
     }
 
     private void PopulateGrid(DataTable table)
+{
+    // 1) clear out old
+    foreach (Transform child in gridContent) Destroy(child.gameObject);
+
+    // 2) tell GridLayoutGroup we want (N+1) columns
+    var grid = gridContent.GetComponent<GridLayoutGroup>();
+    grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
+    grid.constraintCount = desiredColumns.Count + 1;
+
+    int dataRowStart = startRowIndex;
+    int dataRowCount = table.Rows.Count - dataRowStart;
+
+    // --- HEADER ROW (y = –1) ---
+
+    // 3a) corner cell placeholder
+    var corner = Instantiate(placeholderCellPrefab, gridContent);
+    
+    corner.GetComponentInChildren<TextMeshProUGUI>()?.SetText("");
+
+    // 3b) column letters (or placeholders)
+    foreach (int c in desiredColumns)
     {
-        Debug.Log($"[ExcelLoader] PopulateGrid: startRow={startRowIndex}, totalRows={table.Rows.Count}, visibleCols={desiredColumns.Count}");
-        foreach (Transform child in gridContent) Destroy(child.gameObject);
-
-        int rows = table.Rows.Count;
-        int visibleCols = desiredColumns.Count;
-
-        var grid = gridContent.GetComponent<GridLayoutGroup>();
-        if (grid != null)
+        if (c >= 0 && c < table.Columns.Count)
         {
-            grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
-            grid.constraintCount = visibleCols;
+            // real header
+            string letter = ColumnIndexToLetter(c);
+            var hdr = Instantiate(columnHeaderCellPrefab, gridContent);
+            hdr.GetComponent<CellController>().Initialize(-1, c, letter);
         }
-
-        for (int r = startRowIndex; r < rows; r++)
+        else
         {
-            foreach (int c in desiredColumns)
+            // empty placeholder
+            var ph = Instantiate(placeholderCellPrefab, gridContent);
+            
+            ph.GetComponentInChildren<TextMeshProUGUI>()?.SetText("");
+        }
+    }
+
+    // --- DATA ROWS ---
+    for (int r = dataRowStart; r < table.Rows.Count; r++)
+    {
+        // 4a) row‐header (always exists)
+        int displayNumber = (r - dataRowStart) + 1;
+        var rowHdr = Instantiate(rowHeaderCellPrefab, gridContent);
+        rowHdr.GetComponent<CellController>().Initialize(r, -1, displayNumber.ToString());
+
+        // 4b) data columns or placeholders
+        foreach (int c in desiredColumns)
+        {
+            if (c >= 0 && c < table.Columns.Count)
             {
-                if (c < 0 || c >= table.Columns.Count) continue;
-                var cell = Instantiate(cellPrefab, gridContent);
-                var text = cell.GetComponent<TMP_Text>();
-                if (text != null)
-                    text.text = table.Rows[r][c]?.ToString();
+                var cellGO = Instantiate(editableCellPrefab, gridContent);
+                var ctrl   = cellGO.GetComponent<CellController>();
+                ctrl.Initialize(r, c, table.Rows[r][c]?.ToString());
+            }
+            else
+            {
+                // maintain alignment with a blank slot
+                var ph = Instantiate(placeholderCellPrefab, gridContent);
+                
+                ph.GetComponentInChildren<TextMeshProUGUI>()?.SetText("");
             }
         }
     }
+}
+
+private string ColumnIndexToLetter(int columnIndex)
+{
+    var s = "";
+    while (columnIndex >= 0)
+    {
+        int rem = columnIndex % 26;
+        s = (char)('A' + rem) + s;
+        columnIndex = (columnIndex / 26) - 1;
+    }
+    return s;
+}
+
 
     public int FindRowById(string id)
     {
@@ -257,6 +316,47 @@ public class ExcelLoader : MonoBehaviour
         }
         return -1;
     }
+
+    public List<int> FindRowsBySurname(string fragment)
+{
+    var results = new List<int>();
+    var fuzzy   = new List<(int row,int dist)>();
+    if (currentTable == null) return results;
+
+    // 1) normalize the search term
+    string cleanFrag = CleanString(fragment);
+    // 2) pick a max edit distance
+    int dynamicMax = Math.Min(6, Math.Max(1, (int)Math.Ceiling(cleanFrag.Length * 0.5)));
+
+    for (int i = startRowIndex; i < currentTable.Rows.Count; i++)
+    {
+        // pull out just the first word (surname)
+        var raw = currentTable.Rows[i][nameColumnIndex]?.ToString() ?? "";
+        var surname = raw.Split(new[]{' '}, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? "";
+        string cell = CleanString(surname);
+
+        // substring match?
+        if (cell.Contains(cleanFrag))
+        {
+            results.Add(i);
+        }
+        else
+        {
+            // otherwise compute edit distance
+            int d = ComputeLevenshteinDistance(cell, cleanFrag);
+            if (d <= dynamicMax)
+                fuzzy.Add((i,d));
+        }
+    }
+
+    // 3) tack on fuzzy matches in order of closeness
+    foreach (var f in fuzzy.OrderBy(x => x.dist))
+        results.Add(f.row);
+
+    return results;
+}
+
+
 
     /// <summary>
     /// Retrieves the grade value for a given table row, using the configured grade column.
@@ -288,7 +388,17 @@ public class ExcelLoader : MonoBehaviour
         });
 
         // --- now apply the new one ---
-        cell.SetCellValue(newValue);
+        if (double.TryParse(newValue, NumberStyles.Any, CultureInfo.InvariantCulture, out var d))
+        {
+            cell.SetCellValue(d);      // writes as a numeric cell
+            
+
+        }
+        else
+        {
+            cell.SetCellValue(newValue); // fallback to text
+        }
+
 
         // also update your in-memory DataTable
         if (currentTable != null

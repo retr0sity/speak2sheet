@@ -91,9 +91,18 @@ public class SpeechToTextManager : MonoBehaviour
         // wire up the user-override button
         selectModelButton.onClick.AddListener(OnSelectModelClicked);
     }
+    
+    private void Update()
+    {
+        if (Input.GetKeyDown(KeyCode.Space))
+        {
+            OnRecordButtonClicked();
+        }
+    }
 
-    private void OnSelectStringChanged(string localized) {
-        if (currentStatusKey == "select")        statusText.text = localized;
+    private void OnSelectStringChanged(string localized)
+    {
+        if (currentStatusKey == "select") statusText.text = localized;
     }
 
     private string L(string key)
@@ -482,7 +491,8 @@ public class SpeechToTextManager : MonoBehaviour
         else
         {
             // name lookup…
-            matches = excelLoader.FindRowsByPartialName(transcript);
+            matches = excelLoader.FindRowsBySurname(clean);
+            // if none, use fuzzy with our looser threshold
         }
 
 
@@ -507,11 +517,13 @@ public class SpeechToTextManager : MonoBehaviour
             // Instantiate as a child with local transform reset
             var go = Instantiate(resultItemPrefab, resultsContent, false);
             go.SetActive(true);
+            var entry = go.GetComponent<ResultEntry>();
+            entry.RowIndex = row;
 
             // Fill in the text
             var txt = go.GetComponentInChildren<TMP_Text>();
-            string id = excelLoader.GetCellValue(row, 0);
-            string name = excelLoader.GetCellValue(row, 1);
+            string id = excelLoader.GetCellValue(row, excelLoader.IdColumnIndex);
+            string name = excelLoader.GetCellValue(row, excelLoader.NameColumnIndex);
             txt.text = $"{id} – {name}";
 
             // Hook up the button (clear old listeners first)
@@ -525,18 +537,44 @@ public class SpeechToTextManager : MonoBehaviour
         selectMessage.RefreshString();
     }
 
-    private void OnMatchSelected(int rowIndex)
-    {
-        selectedRowIndex = rowIndex;
-        resultsPanel.SetActive(false);
+    /// <summary>
+/// Fuzzy‐searches only the first word (surname) in the name column.
+/// </summary>
+        
 
-        // now go record the grade
-        currentMode = Mode.RecordingGrade;
-        isRecording = false;          // ensure correct toggle
-        StartRecording();             // kick off immediately
-        isRecording = true;
-        UpdateUI();
+
+    private void OnMatchSelected(int rowIndex)
+{
+    selectedRowIndex = rowIndex;
+    // …do NOT hide the panel any more!
+
+    // highlight the chosen one, lock the rest
+    foreach (Transform child in resultsContent)
+    {
+        var entry = child.GetComponent<ResultEntry>();
+        var btn   = child.GetComponent<Button>();
+        if (entry.RowIndex == rowIndex)
+        {
+            // highlight
+            btn.image.color       = Color.yellow;
+            btn.interactable      = true;
+        }
+        else
+        {
+            // lock out
+            btn.interactable      = false;
+        }
     }
+
+    // switch to grade‐recording mode
+    currentMode = Mode.RecordingGrade;
+    isRecording = false;
+    StartRecording();
+    isRecording = true;
+    UpdateUI();
+}
+
+
 
     private void HandleGradeTranscript(string transcript)
     {
@@ -551,11 +589,25 @@ public class SpeechToTextManager : MonoBehaviour
         }
 
         excelLoader.UpdateCell(selectedRowIndex, excelLoader.GradeColumnIndex, grade);
+        // un‐highlight & re‐enable all entries
+        foreach (Transform child in resultsContent)
+        {
+            var btn = child.GetComponent<Button>();
+            btn.image.color = Color.white;
+            btn.interactable = true;
+        }
+
+        // reset selection state
+        currentMode = Mode.SelectingEntry;
+        selectedRowIndex = -1;
+
         statusText.text = $"{L("wrote")} {grade}";
         Debug.Log($"[Whisper] Set grade for row {selectedRowIndex} to {grade}");
 
         currentMode = Mode.SelectingEntry;
         selectedRowIndex = -1;
+        foreach (Transform child in resultsContent)
+            Destroy(child.gameObject);
     }
 
 
@@ -571,11 +623,26 @@ public class SpeechToTextManager : MonoBehaviour
     if (m0.Success)
         return $"{m0.Groups[1].Value}.{m0.Groups[2].Value}";
 
+    // 0.1) then look for two number‐words separated by comma/period:
+    //     e.g. “τέσσερα, τρία” or “τρία. δύο”
+    var mw = Regex.Match(transcript, @"\b([^\d\W]+)[\.,]\s*([^\d\W]+)\b");
+    if (mw.Success)
+    {
+        var w1 = NormalizeToken(mw.Groups[1].Value);
+        var w2 = NormalizeToken(mw.Groups[2].Value);
+        if (NumberMap.TryGetValue(w1, out var ip) && NumberMap.TryGetValue(w2, out var dp))
+            return $"{ip}.{dp}";
+    }
+
     // 1) strip accents
     transcript = transcript
       .Normalize(NormalizationForm.FormD)
       .Where(c => CharUnicodeInfo.GetUnicodeCategory(c) != UnicodeCategory.NonSpacingMark)
       .Aggregate("", (s, c) => s + c);
+
+    // …and then your remaining steps (punctuation removal, ΚΟΜΜΑ splitting, fallback, etc.)…
+
+
 
     // 2) remove unwanted punctuation
     transcript = Regex.Replace(transcript, @"[^\p{L}\p{N}\.\s]+", " ");
