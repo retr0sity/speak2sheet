@@ -49,13 +49,13 @@ public class ExcelLoader : MonoBehaviour
 
     [Header("Display Settings")]
     [Tooltip("Which column indices to show in the grid")]  
-    [SerializeField] private List<int> desiredColumns = new List<int> { 0, 1, 6, 7 };
+    [SerializeField] private List<int> desiredColumns = new List<int> { 1, 3, 6, 7 };
     [Tooltip("Start displaying from this row index (0-based, include header if needed)")]
     [SerializeField] private int startRowIndex = 1;
 
     [Header("Lookup Settings")]
     [Tooltip("Column index used when finding rows by ID")]  
-    [SerializeField] private int idColumnIndex = 0;
+    [SerializeField] private int idColumnIndex = 3;
     [Tooltip("Column index used for grades lookup")]  
     [SerializeField] private int gradeColumnIndex = 7;
 
@@ -257,6 +257,47 @@ public class ExcelLoader : MonoBehaviour
         }
         return -1;
     }
+
+    public List<int> FindRowsBySurname(string fragment)
+{
+    var results = new List<int>();
+    var fuzzy   = new List<(int row,int dist)>();
+    if (currentTable == null) return results;
+
+    // 1) normalize the search term
+    string cleanFrag = CleanString(fragment);
+    // 2) pick a max edit distance
+    int dynamicMax = Math.Min(6, Math.Max(1, (int)Math.Ceiling(cleanFrag.Length * 0.5)));
+
+    for (int i = startRowIndex; i < currentTable.Rows.Count; i++)
+    {
+        // pull out just the first word (surname)
+        var raw = currentTable.Rows[i][nameColumnIndex]?.ToString() ?? "";
+        var surname = raw.Split(new[]{' '}, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? "";
+        string cell = CleanString(surname);
+
+        // substring match?
+        if (cell.Contains(cleanFrag))
+        {
+            results.Add(i);
+        }
+        else
+        {
+            // otherwise compute edit distance
+            int d = ComputeLevenshteinDistance(cell, cleanFrag);
+            if (d <= dynamicMax)
+                fuzzy.Add((i,d));
+        }
+    }
+
+    // 3) tack on fuzzy matches in order of closeness
+    foreach (var f in fuzzy.OrderBy(x => x.dist))
+        results.Add(f.row);
+
+    return results;
+}
+
+
 
     /// <summary>
     /// Retrieves the grade value for a given table row, using the configured grade column.

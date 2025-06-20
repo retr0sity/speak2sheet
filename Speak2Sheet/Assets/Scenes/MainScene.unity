@@ -6684,6 +6684,7 @@ GameObject:
   - component: {fileID: 1113424140}
   - component: {fileID: 1113424139}
   - component: {fileID: 1113424138}
+  - component: {fileID: 1113424141}
   m_Layer: 0
   m_Name: resultCell
   m_TagString: Untagged
@@ -6793,6 +6794,19 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1113424136}
   m_CullTransparentMesh: 1
+--- !u!114 &1113424141
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1113424136}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5beed5e4ce32f014ab5900ea7ea54021, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  RowIndex: 0
 --- !u!1 &1152005513
 GameObject:
   m_ObjectHideFlags: 0
@@ -13827,9 +13841,9 @@ MonoBehaviour:
   openExcelButton: {fileID: 1596589288}
   gridContent: {fileID: 992554102}
   cellPrefab: {fileID: 1865098233}
-  desiredColumns: 00000000010000000600000007000000
+  desiredColumns: 01000000030000000600000007000000
   startRowIndex: 1
-  idColumnIndex: 0
+  idColumnIndex: 3
   gradeColumnIndex: 7
   saveButton: {fileID: 1279205678}
   undoButton: {fileID: 1780431298}
