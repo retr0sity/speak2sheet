@@ -15,6 +15,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using Org.BouncyCastle.Security;
 using System.Text;
+using System.Globalization;
 
 
 
@@ -27,6 +28,9 @@ public class ExcelLoader : MonoBehaviour
     [Header("Lookup Settings")]
     [Tooltip("Column index used when finding rows by Name")]
     [SerializeField] private int nameColumnIndex = 1;
+
+    [SerializeField] private GameObject editableCellPrefab;
+
 
     public int NameColumnIndex => nameColumnIndex;
 
@@ -218,32 +222,34 @@ public class ExcelLoader : MonoBehaviour
     }
 
     private void PopulateGrid(DataTable table)
+{
+    // 1) Clear old
+    foreach (Transform child in gridContent) Destroy(child.gameObject);
+
+    // 2) Configure grid constraint ONCE
+    var grid = gridContent.GetComponent<GridLayoutGroup>();
+    grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
+    grid.constraintCount  = desiredColumns.Count;
+
+    int rows = table.Rows.Count;
+
+    // 3) Spawn exactly one prefab per cell
+    for (int r = startRowIndex; r < rows; r++)
     {
-        Debug.Log($"[ExcelLoader] PopulateGrid: startRow={startRowIndex}, totalRows={table.Rows.Count}, visibleCols={desiredColumns.Count}");
-        foreach (Transform child in gridContent) Destroy(child.gameObject);
-
-        int rows = table.Rows.Count;
-        int visibleCols = desiredColumns.Count;
-
-        var grid = gridContent.GetComponent<GridLayoutGroup>();
-        if (grid != null)
+        foreach (int c in desiredColumns)
         {
-            grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
-            grid.constraintCount = visibleCols;
-        }
-
-        for (int r = startRowIndex; r < rows; r++)
-        {
-            foreach (int c in desiredColumns)
-            {
-                if (c < 0 || c >= table.Columns.Count) continue;
-                var cell = Instantiate(cellPrefab, gridContent);
-                var text = cell.GetComponent<TMP_Text>();
-                if (text != null)
-                    text.text = table.Rows[r][c]?.ToString();
-            }
+            if (c < 0 || c >= table.Columns.Count) continue;
+            var cellGO = Instantiate(editableCellPrefab, gridContent);
+            var ctrl   = cellGO.GetComponent<CellController>();
+            ctrl.Initialize(r, c, table.Rows[r][c]?.ToString());
         }
     }
+
+    // 4) Force a single layout rebuild
+    //Canvas.ForceUpdateCanvases();
+    //LayoutRebuilder.ForceRebuildLayoutImmediate(gridContent);
+}
+
 
     public int FindRowById(string id)
     {
@@ -329,7 +335,17 @@ public class ExcelLoader : MonoBehaviour
         });
 
         // --- now apply the new one ---
-        cell.SetCellValue(newValue);
+        if (double.TryParse(newValue, NumberStyles.Any, CultureInfo.InvariantCulture, out var d))
+        {
+            cell.SetCellValue(d);      // writes as a numeric cell
+            
+
+        }
+        else
+        {
+            cell.SetCellValue(newValue); // fallback to text
+        }
+
 
         // also update your in-memory DataTable
         if (currentTable != null
