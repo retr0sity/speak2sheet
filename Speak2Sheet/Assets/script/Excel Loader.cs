@@ -319,30 +319,70 @@ public class ExcelLoader : MonoBehaviour
 public List<int> FindRowsByPartialId(string fragment)
     => FindRowsByPartialId(fragment, idColumnIndex);
 
-// 2) The real implementation (no default!):
-public List<int> FindRowsByPartialId(string partialId, int idColumnIndex)
+    // 2) The real implementation (no default!):
+    public List<int> FindRowsByPartialId(string partialId, int idColumnIndex)
+    {
+        var matches = new List<int>();
+        if (currentTable == null) return matches;
+
+        for (int i = startRowIndex; i < currentTable.Rows.Count; i++)
+        {
+            var cell = currentTable.Rows[i][idColumnIndex]?.ToString() ?? "";
+            if (cell.Contains(partialId) || cell.EndsWith(partialId, StringComparison.Ordinal))
+                matches.Add(i);
+        }
+        return matches;
+    }
+
+    /// <summary>
+/// Returns zero-based sheet row indices whose ID (digits only) is within a small
+/// Levenshtein distance of the spoken query—great for catching missing leading zeros.
+/// </summary>
+/// <summary>
+/// Fuzzy search numeric IDs: returns rows whose ID string (digits only) is within
+/// a small Levenshtein distance of the query.
+/// </summary>
+public List<int> FindRowsByFuzzyId(string idQuery, int idColumn = -1)
 {
-    var matches = new List<int>();
-    if (currentTable == null) return matches;
+    if (idColumn < 0) idColumn = idColumnIndex; // use configured column
+
+    var results = new List<(int row, int dist)>();
+    if (currentTable == null) return new List<int>();
+
+    // clean the query to digits-only
+    string q = Regex.Replace(idQuery, @"\D", "");
+
+    // choose a threshold: e.g. allow up to 1 edit per 4 digits (min 1, max 2)
+    int maxDist = Math.Min(2, Math.Max(1, q.Length / 4));
 
     for (int i = startRowIndex; i < currentTable.Rows.Count; i++)
     {
-        var cell = currentTable.Rows[i][idColumnIndex]?.ToString() ?? "";
-        if (cell.Contains(partialId) || cell.EndsWith(partialId, StringComparison.Ordinal))
-            matches.Add(i);
+        // extract the cell’s digits
+        string cell = Regex.Replace(currentTable.Rows[i][idColumn]?.ToString() ?? "", @"\D", "");
+        if (string.IsNullOrEmpty(cell)) continue;
+
+        int d = ComputeLevenshteinDistance(cell, q);
+        if (d <= maxDist)
+            results.Add((i, d));
     }
-    return matches;
+
+    // sort by closest first
+    return results
+           .OrderBy(p => p.dist)
+           .Select(p => p.row)
+           .ToList();
 }
+
 
 
     /// <summary>
     /// Returns zero-based sheet row indices whose Column1 contains the given name fragment.
     /// </summary>
     /// <summary>
-/// Fallback to use the configured nameColumnIndex.
-/// </summary>
-public List<int> FindRowsByPartialName(string fragment)
-    => FindRowsByPartialName(fragment, nameColumnIndex);
+    /// Fallback to use the configured nameColumnIndex.
+    /// </summary>
+    public List<int> FindRowsByPartialName(string fragment)
+        => FindRowsByPartialName(fragment, nameColumnIndex);
 
 /// <summary>
 /// Full fuzzy‐search implementation, with an explicit column index.

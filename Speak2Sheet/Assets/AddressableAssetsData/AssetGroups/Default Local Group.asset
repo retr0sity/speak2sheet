@@ -15,12 +15,6 @@ MonoBehaviour:
   m_GroupName: Default Local Group
   m_GUID: b9018f9ae42cb471c8394ca0d73805a2
   m_SerializeEntries:
-  - m_GUID: 02f4042d949ccfb4ba32de7d8eddb696
-    m_Address: Greek (el)
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Locale
-    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 14c6584ea75a784e6b9b1c2b9b6fa4e4
     m_Address: Assets/Localization Settings.asset
     m_ReadOnly: 0
@@ -31,26 +25,8 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 42c3430b82a587c02b4836a1532b5fce
-    m_Address: English (en)
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Locale
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 59e1582448570854d99392443caee643
-    m_Address: SpeechToTextUI_el
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Locale-el
-    - Preload
-    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 6a4177412360977deb96e9c34575b5ee
     m_Address: Assets/Locales/UIStrings/UIStrings Shared Data.asset
-    m_ReadOnly: 0
-    m_SerializedLabels: []
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 9d3dced3b00b11749a1824f7cd828c0e
-    m_Address: Assets/Locales/SpeechToTextUI Shared Data.asset
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
@@ -70,13 +46,6 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels:
     - Locale-en
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: fa42b537c419b0d4796d84dd5f745be6
-    m_Address: SpeechToTextUI_en
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Locale-en
-    - Preload
     FlaggedDuringContentUpdateRestriction: 0
   m_ReadOnly: 0
   m_Settings: {fileID: 11400000, guid: 745567231b0afa88e86613980c634318, type: 2}
