@@ -344,29 +344,30 @@ public List<int> FindRowsByPartialId(string fragment)
 /// </summary>
 public List<int> FindRowsByFuzzyId(string idQuery, int idColumn = -1)
 {
-    if (idColumn < 0) idColumn = idColumnIndex; // use configured column
+    if (idColumn < 0) idColumn = idColumnIndex;
 
     var results = new List<(int row, int dist)>();
     if (currentTable == null) return new List<int>();
 
-    // clean the query to digits-only
+    // clean query down to digits only
     string q = Regex.Replace(idQuery, @"\D", "");
-
-    // choose a threshold: e.g. allow up to 1 edit per 4 digits (min 1, max 2)
-    int maxDist = Math.Min(2, Math.Max(1, q.Length / 4));
+    if (q.Length == 0) return new List<int>();
 
     for (int i = startRowIndex; i < currentTable.Rows.Count; i++)
     {
-        // extract the cell’s digits
+        // get the cell digits
         string cell = Regex.Replace(currentTable.Rows[i][idColumn]?.ToString() ?? "", @"\D", "");
-        if (string.IsNullOrEmpty(cell)) continue;
+        if (cell.Length == 0) continue;
 
         int d = ComputeLevenshteinDistance(cell, q);
-        if (d <= maxDist)
+        // Choose a threshold that’s generous: up to the length of the query,
+        // or up to half the cell length, whichever is larger
+        int thresh = Math.Max(q.Length, cell.Length / 2);
+        if (d <= thresh)
             results.Add((i, d));
     }
 
-    // sort by closest first
+    // sort by closest distance first
     return results
            .OrderBy(p => p.dist)
            .Select(p => p.row)

@@ -468,17 +468,18 @@ List<int> matches;
 
 if (!string.IsNullOrEmpty(idQuery))
 {
-    // 1) Exact “ends with” / contains:
+    // exact/partial
     matches = excelLoader.FindRowsByPartialId(idQuery);
-    // 2) If none, try fuzzy numeric:
+    // if none, use fuzzy with our looser threshold
     if (matches.Count == 0)
         matches = excelLoader.FindRowsByFuzzyId(idQuery);
 }
 else
 {
-    // name branch
+    // name lookup…
     matches = excelLoader.FindRowsByPartialName(transcript);
 }
+
 
 
     if (matches.Count == 0)
@@ -558,6 +559,12 @@ else
     /// </summary>
     private string ExtractGradeOnly(string transcript)
 {
+    // 0) first look for an explicit digit‐dot‐digit or digit‐comma‐digit sequence:
+    //    e.g. “3.2”, “3,2”, “3 , 2”
+    var m0 = Regex.Match(transcript, @"\b(\d+)[\.,]\s*(\d+)\b");
+    if (m0.Success)
+        return $"{m0.Groups[1].Value}.{m0.Groups[2].Value}";
+
     // 1) strip accents
     transcript = transcript
       .Normalize(NormalizationForm.FormD)
@@ -570,47 +577,50 @@ else
     // 3) uppercase
     transcript = transcript.ToUpperInvariant();
 
-    // 4) initial split on whitespace (we’ll re-split on non-alphanumeric below)
-    var rough = transcript.Split(new[]{' ','\t','\n','\r'}, StringSplitOptions.RemoveEmptyEntries);
+    // 3.5) isolate ΚΟΜΜΑ/ΚΟΜΑ when glued to words
+    transcript = Regex.Replace(transcript,
+        @"(?<=\p{L})(ΚΟΜΜΑ|ΚΟΜΑ)(?=\p{L})",
+        " $1 ");
 
+    // 4) split on whitespace
+    var rough = transcript
+        .Split(new[]{' ','\t','\n','\r'}, StringSplitOptions.RemoveEmptyEntries);
+
+    // 5) break apart any remaining glued ΚΟΜΜΑ+word tokens
     var tokens = new List<string>();
     foreach (var t in rough)
     {
-        // if a token combines ΚΟΜΜΑ + a number-word, split it
         var m = Regex.Match(t, @"^(ΚΟΜΜΑ|ΚΟΜΑ)(.+)$");
         if (m.Success)
         {
-            tokens.Add(m.Groups[1].Value);      // ΚΟΜΜΑ
-            tokens.Add(m.Groups[2].Value);      // e.g. ΤΡΙΑ
+            tokens.Add(m.Groups[1].Value);
+            tokens.Add(m.Groups[2].Value);
         }
-        else
-        {
-            tokens.Add(t);
-        }
+        else tokens.Add(t);
     }
 
-    // 5) now make a clean list split on any non-letters/digits/dot
+    // 6) split on non‐letter/digit/dot to get rawTokens
     var rawTokens = tokens
-      .SelectMany(t => Regex.Split(t, @"[^\p{L}\p{N}\.]+"))
-      .Where(t => t.Length > 0)
-      .ToList();
+        .SelectMany(t => Regex.Split(t, @"[^\p{L}\p{N}\.]+"))
+        .Where(t => t.Length > 0)
+        .ToList();
 
-    // 6) look for number • ΚΟΜΜΑ • number
+    // 7) look for number • ΚΟΜΜΑ • number
     for (int i = 0; i < rawTokens.Count - 2; i++)
     {
         var w1 = NormalizeToken(rawTokens[i]);
         var w2 = NormalizeToken(rawTokens[i + 1]);
         var w3 = NormalizeToken(rawTokens[i + 2]);
 
-        if ((w2 == "ΚΟΜΜΑ" || w2 == "ΚΟΜΑ") &&
-            NumberMap.TryGetValue(w1, out var intPart) &&
-            NumberMap.TryGetValue(w3, out var decPart))
+        if ((w2 == "ΚΟΜΜΑ" || w2 == "ΚΟΜΑ")
+            && NumberMap.TryGetValue(w1, out var intPart)
+            && NumberMap.TryGetValue(w3, out var decPart))
         {
             return $"{intPart}.{decPart}";
         }
     }
 
-    // 7) fallback single-token lookup
+    // 8) fallback single‐token
     foreach (var raw in rawTokens)
     {
         var tok = NormalizeToken(raw);
@@ -622,6 +632,8 @@ else
 
     return null;
 }
+
+
 
 /// <summary>
 /// Strip non-alphanumeric from ends, e.g. "'3." -> "3"
