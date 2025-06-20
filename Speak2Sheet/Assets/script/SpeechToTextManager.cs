@@ -30,7 +30,6 @@ public class SpeechToTextManager : MonoBehaviour
     [SerializeField] private Button recordButton;
     [SerializeField] private TMP_Text recordButtonText;
     [SerializeField] private TMP_Text statusText;
-    [SerializeField] private TMP_Text transcriptText;
 
     [Header("Recording Settings")]
     [SerializeField] private int sampleRate = 16000;
@@ -319,7 +318,6 @@ public class SpeechToTextManager : MonoBehaviour
                 if (m.Success) lines.Add(m.Groups[1].Value.Trim());
             }
             string clean = string.Join(" ", lines);
-            transcriptText.text = clean;
             statusText.text = "done";
             Debug.Log($"[Whisper] {clean}");
             ProcessTranscript(clean);
@@ -470,6 +468,7 @@ public class SpeechToTextManager : MonoBehaviour
 
         // 2) extract any digits or number-words from the cleaned string:
         var idQuery = ExtractIdDigits(transcript);
+        idQuery = Regex.Replace(idQuery, @"\D+", "");
         List<int> matches;
 
         if (!string.IsNullOrEmpty(idQuery))
