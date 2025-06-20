@@ -4385,6 +4385,15 @@ MonoBehaviour:
     m_FallbackState: 0
     m_WaitForCompletion: 0
     m_LocalVariables: []
+  selectMessage:
+    m_TableReference:
+      m_TableCollectionName: GUID:9d3dced3b00b11749a1824f7cd828c0e
+    m_TableEntryReference:
+      m_KeyId: 416066072579
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
   references:
     version: 2
     RefIds: []

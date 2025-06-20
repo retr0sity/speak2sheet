@@ -54,6 +54,7 @@ public class SpeechToTextManager : MonoBehaviour
 
     [Header("Localized Messages")]
     [SerializeField] private LocalizedString transcribingMessage;
+    [SerializeField] private LocalizedString selectMessage;
 
 
     private string whisperExePath;
@@ -79,6 +80,7 @@ public class SpeechToTextManager : MonoBehaviour
     private void Start()
     {
         LocalizationSettings.SelectedLocaleChanged += OnLocaleChanged;
+        selectMessage.StringChanged += OnSelectStringChanged;
 
         recordButton.onClick.AddListener(OnRecordButtonClicked);
         // hide result list at start
@@ -89,6 +91,10 @@ public class SpeechToTextManager : MonoBehaviour
 
         // wire up the user-override button
         selectModelButton.onClick.AddListener(OnSelectModelClicked);
+    }
+
+    private void OnSelectStringChanged(string localized) {
+        if (currentStatusKey == "select")        statusText.text = localized;
     }
 
     private string L(string key)
@@ -455,38 +461,38 @@ public class SpeechToTextManager : MonoBehaviour
     }
 
     private void HandleSelectionTranscript(string transcript)
-{
-    // 1) strip all punctuation except dot & whitespace, uppercase:
-    var clean = Regex
-        .Replace(transcript, @"[^\p{L}\p{N}\s\.]", " ")
-        .Trim()
-        .ToUpperInvariant();
-
-    // 2) extract any digits or number-words from the cleaned string:
-    var idQuery = ExtractIdDigits(transcript);
-List<int> matches;
-
-if (!string.IsNullOrEmpty(idQuery))
-{
-    // exact/partial
-    matches = excelLoader.FindRowsByPartialId(idQuery);
-    // if none, use fuzzy with our looser threshold
-    if (matches.Count == 0)
-        matches = excelLoader.FindRowsByFuzzyId(idQuery);
-}
-else
-{
-    // name lookup…
-    matches = excelLoader.FindRowsByPartialName(transcript);
-}
-
-
-
-    if (matches.Count == 0)
     {
-        ShowError("no_results", clean);
-        return;
-    }
+        // 1) strip all punctuation except dot & whitespace, uppercase:
+        var clean = Regex
+            .Replace(transcript, @"[^\p{L}\p{N}\s\.]", " ")
+            .Trim()
+            .ToUpperInvariant();
+
+        // 2) extract any digits or number-words from the cleaned string:
+        var idQuery = ExtractIdDigits(transcript);
+        List<int> matches;
+
+        if (!string.IsNullOrEmpty(idQuery))
+        {
+            // exact/partial
+            matches = excelLoader.FindRowsByPartialId(idQuery);
+            // if none, use fuzzy with our looser threshold
+            if (matches.Count == 0)
+                matches = excelLoader.FindRowsByFuzzyId(idQuery);
+        }
+        else
+        {
+            // name lookup…
+            matches = excelLoader.FindRowsByPartialName(transcript);
+        }
+
+
+
+        if (matches.Count == 0)
+        {
+            ShowError("no_results", clean);
+            return;
+        }
 
         // populate the scroll view
         // Clear out old items
@@ -516,7 +522,8 @@ else
         }
 
         resultsPanel.SetActive(true);
-        statusText.text = "select";
+        currentStatusKey = "select";
+        selectMessage.RefreshString();
     }
 
     private void OnMatchSelected(int rowIndex)
@@ -678,6 +685,7 @@ private string NormalizeToken(string t)
     {
         LocalizationSettings.SelectedLocaleChanged -= OnLocaleChanged;
         transcribingMessage.StringChanged -= value => statusText.text = value;
+        selectMessage.StringChanged -= OnSelectStringChanged;
     }
 
 }
