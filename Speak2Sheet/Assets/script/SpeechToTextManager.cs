@@ -307,42 +307,55 @@ public class SpeechToTextManager : MonoBehaviour
     }
 
     private async Task TranscribeAsync(string wavPath)
+{
+    cts?.Cancel();
+    cts = new CancellationTokenSource();
+    currentStatusKey = "Transcribing...";
+    transcribingMessage.StringChanged += value =>
     {
-        cts?.Cancel();
-        cts = new CancellationTokenSource();
-        currentStatusKey = "Transcribing...";
-        transcribingMessage.StringChanged += value =>
+        if (currentStatusKey == "Transcribing...")
+            statusText.text = value;
+    };
+    transcribingMessage.RefreshString();
+
+    try
+    {
+        string output = await RunWhisperProcessAsync(wavPath, cts.Token);
+        var lines = new List<string>();
+        foreach (string line in output.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries))
         {
-            if (currentStatusKey == "Transcribing...")
-                statusText.text = value;
-        };
-        transcribingMessage.RefreshString();
+            var m = Regex.Match(line, @"^\[\d{2}:\d{2}:\d{2}\.\d+\s*-->\s*\d{2}:\d{2}:\d{2}\.\d+\]\s*(.+)$");
+            if (m.Success) lines.Add(m.Groups[1].Value.Trim());
+        }
+        string clean = string.Join(" ", lines);
+        statusText.text = "done";
+        Debug.Log($"[Whisper] {clean}");
+        ProcessTranscript(clean);
+    }
+    catch (OperationCanceledException)
+    {
+        statusText.text = "cancel";
+        currentStatusKey = "Idle";
+    }
+    catch (Exception e)
+    {
+        ShowError("transcription_failed", e.Message);
+        currentStatusKey = "Idle";
+    }
+    finally
+    {
+        // ---- DELETE TEMP FILE ----
         try
         {
-            string output = await RunWhisperProcessAsync(wavPath, cts.Token);
-            var lines = new List<string>();
-            foreach (string line in output.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries))
-            {
-                var m = Regex.Match(line, @"^\[\d{2}:\d{2}:\d{2}\.\d+\s*-->\s*\d{2}:\d{2}:\d{2}\.\d+\]\s*(.+)$");
-                if (m.Success) lines.Add(m.Groups[1].Value.Trim());
-            }
-            string clean = string.Join(" ", lines);
-            statusText.text = "done";
-            Debug.Log($"[Whisper] {clean}");
-            ProcessTranscript(clean);
+            if (File.Exists(wavPath))
+                File.Delete(wavPath);
         }
-        catch (OperationCanceledException)
+        catch (Exception ex)
         {
-            statusText.text = "cancel";
-            currentStatusKey = "Idle";
-        }
-        catch (Exception e)
-        {
-            ShowError($"transcription_failed", e.Message);
-            // this is some of the most shit code ive ever written
-            currentStatusKey = "Idle";
+            Debug.LogWarning($"Could not delete temp WAV: {ex.Message}");
         }
     }
+}
 
     private Task<string> RunWhisperProcessAsync(string filePath, CancellationToken token)
     {
