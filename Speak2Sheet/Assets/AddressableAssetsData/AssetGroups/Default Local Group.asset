@@ -15,6 +15,12 @@ MonoBehaviour:
   m_GroupName: Default Local Group
   m_GUID: b9018f9ae42cb471c8394ca0d73805a2
   m_SerializeEntries:
+  - m_GUID: 02f4042d949ccfb4ba32de7d8eddb696
+    m_Address: Greek (el)
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Locale
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 14c6584ea75a784e6b9b1c2b9b6fa4e4
     m_Address: Assets/Localization Settings.asset
     m_ReadOnly: 0
@@ -24,6 +30,12 @@ MonoBehaviour:
     m_Address: Assets/Locales/SpeechToTextUI.asset
     m_ReadOnly: 0
     m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 42c3430b82a587c02b4836a1532b5fce
+    m_Address: English (en)
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Locale
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 59e1582448570854d99392443caee643
     m_Address: SpeechToTextUI_el
