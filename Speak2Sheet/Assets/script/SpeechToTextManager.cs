@@ -236,7 +236,7 @@ public class SpeechToTextManager : MonoBehaviour
             ShowError("mic_missing");
             return;
         }
-        clip = Microphone.Start(null, false, maxDurationSec, sampleRate);
+        clip = Microphone.Start(null, false, maxDurationSec, sampleRate); //ksekinaei to microphone
     }
 
     private void StopRecording()
@@ -265,7 +265,7 @@ public class SpeechToTextManager : MonoBehaviour
             }
         }
 
-        string wavPath = Path.Combine(Application.persistentDataPath, "recording.wav");
+        string wavPath = Path.Combine(Application.persistentDataPath, "recording.wav"); //saving to recording
         statusText.text = "saving";
         Task.Run(() => WriteWavFile(wavPath, mono, 1, sampleRate))
             .ContinueWith(_ => _ = TranscribeAsync(wavPath), TaskScheduler.FromCurrentSynchronizationContext());
