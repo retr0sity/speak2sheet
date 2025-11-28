@@ -1,187 +1,161 @@
-Speak2Sheet - Voice-Activated Grading Interface
+Speech2Sheet: Voice-Based Grading Interface
 
-https://img.shields.io/badge/License-MIT-yellow.svg
-https://img.shields.io/badge/Platform-Windows%2520%257C%2520Linux-blue.svg
-![Unity](https://img.shields.io/badge/Unity-6000.0.48f1 LTS-black.svg)
+Speech2Sheet is a cross-platform tool developed to streamline the academic grading process. It combines offline speech recognition (OpenAI Whisper) with direct Excel file manipulation to reduce the time and administrative burden of manual grade entry.
 
-A cross-platform desktop application that enables educators to enter student grades using voice commands, directly interfacing with Excel files through offline speech recognition.
+This application was developed as part of a Bachelor Thesis at the University of Thessaly, Department of Digital Systems.
 
-    📖 Academic Thesis: This project was developed as part of my Bachelor's Thesis at University of Thessaly. Read the full thesis here
+📖 Table of Contents
 
-✨ Features
+About the Project
 
-    🎤 Offline Speech Recognition: Powered by OpenAI's Whisper.cpp for privacy-focused, internet-free operation
+Key Features
 
-    📊 Direct Excel Integration: Read/write .xls/.xlsx files without Microsoft Office installation
+System Architecture
 
-    🌐 Bilingual Support: Full Greek and English language support with real-time switching
+Installation
 
-    🔍 Smart Student Matching: Approximate string matching with Levenshtein distance for fuzzy student lookup
+How to Use
 
-    💾 Auto-Save & Undo: Automatic saving and undo functionality to prevent data loss
+Settings
 
-    🎯 Customizable Interface: Dynamic column mapping and display preferences
+Academic Details
 
-    🖥️ Cross-Platform: Native builds for Windows and Linux
+🧐 About the Project
 
-🚀 Quick Start
-Download & Install
+Traditional grading involves repetitive manual data entry into spreadsheets or web forms, a process prone to errors and time-consuming for educators. Speech2Sheet offers a unified workspace where instructors can:
 
-    Download the latest release from the Releases page
+Dictate student names or IDs to find them in a list.
 
-    Choose your platform:
+Dictate grades (integers or decimals).
 
-        Windows: Download Speak2Sheet_Windows.zip, extract and run Speak2Sheet.exe
+Edit spreadsheets in real-time without needing Microsoft Office installed.
 
-        Linux: Download Speak2Sheet_Linux.zip, extract and run the executable
+The system runs entirely offline, ensuring data privacy and usability in environments without stable internet access.
 
-System Requirements
+✨ Key Features
 
-    Windows 10/11 (64-bit) or Linux (64-bit)
+🎙️ Offline Speech Recognition: Powered by Whisper.cpp (OpenAI Whisper), supporting both English and Greek.
 
-    Microphone for voice input
+📊 Direct Excel Manipulation: Reads and writes .xls and .xlsx files directly using NPOI and ExcelDataReader. No MS Office installation required.
 
-    4GB RAM minimum, 8GB recommended
+🔍 Fuzzy Search: Uses Levenshtein distance algorithms to find students even if the pronunciation isn't perfect (Approximate String Matching).
 
-    500MB disk space for application and speech models
+⚡ Dynamic Grid: View and edit specific columns (ID, Name, Grade) in a responsive UI.
 
-🎮 How to Use
-Basic Workflow
+🛡️ Safety Features: Includes an Undo Stack and configurable Auto-Save.
 
-    Open Excel File: Click "Open Excel" and select your grade sheet (.xls or .xlsx)
+🌍 Bilingual UI: Fully localized interface with instant switching between English and Greek.
 
-    Configure Columns: Set which columns contain Student IDs, Names, and Grades
+🛠 System Architecture
 
-    Find Student by Voice:
+The application is built using a modular architecture within the Unity Engine (LTS 6000.0.48f1).
 
-        Click "Start Recording"
+Component
 
-        Say the student's ID or name (e.g., "three two zero zero one" or "Papadopoulos")
+Technology
 
-        Select the correct match from results
+Purpose
 
-    Enter Grade by Voice:
+Core Engine
 
-        Speak the grade (e.g., "eight point five" or "οχτώ κόμμα πέντε")
+Unity
 
-        The grade is automatically entered into the correct cell
+UI Toolkit, Cross-platform build target.
 
-    Save: Changes are auto-saved or manually saved with the Save button
+ASR Engine
 
-Voice Command Examples
-Action	English	Greek
-Student ID	"three two zero zero one"	"τρία δύο μηδέν μηδέν ένα"
-Grade	"seven point five"	"επτά κόμμα πέντε"
-Student Name	"Maria"	"Μαρία"
-🛠️ For Developers
-Building from Source
-bash
+Whisper.cpp
 
-# Clone the repository
-git clone https://github.com/retr0sity/speak2sheet.git
-cd speak2sheet
+Native C++ plugin for offline, high-performance speech-to-text.
 
-# Open in Unity 6000.0.48f1 LTS or later
+Data I/O
 
-Dependencies
+ExcelDataReader
 
-    Unity 6000.0.48f1 LTS
+Fast, stream-based reading of Excel files.
 
-    NPOI: Excel file manipulation
+Data Manipulation
 
-    ExcelDataReader: Fast Excel file loading
+NPOI
 
-    Whisper.cpp: Offline speech recognition
+Writing and saving changes to .xls/.xlsx files.
 
-    Unity Localization: Bilingual UI support
+UI/UX
 
-Project Structure
-text
+Unity UI / TMP
 
-Speak2Sheet/
-├── Scripts/
-│   ├── ExcelLoader.cs          # Excel file management
-│   ├── SpeechToTextManager.cs  # Voice recognition handling
-│   ├── ColumnSettingsUIManager.cs # UI configuration
-│   └── AutoSaveController.cs   # Data persistence
-├── Prefabs/                   # UI components
-├── Localization/              # Greek/English text assets
-└── StreamingAssets/           # Whisper models
+Dynamic grid generation and responsive layout.
 
-🎯 Technical Highlights
-Speech Recognition Pipeline
+📥 Installation
 
-    Offline Processing: All audio processed locally using Whisper.cpp
+Pre-requisites
 
-    Dual Language Models: Optimized for both Greek and English speech
+Windows: Windows 10 or 11 (64-bit).
 
-    Real-time Processing: <3 second response time for typical inputs
+Linux: A standard 64-bit distribution.
 
-Excel Integration
+Microphone: A functional input device.
 
-    Format Preservation: Maintains Excel formatting and formulas
+Steps
 
-    Large File Support: Efficient handling of 100,000+ row spreadsheets
+Go to the [suspicious link removed] page.
 
-    Streaming Architecture: Low memory footprint during operation
+Download the .zip file corresponding to your operating system.
 
-Smart Matching Algorithm
-csharp
+Extract the archive.
 
-// Levenshtein distance-based fuzzy matching
-int dynamicMax = Math.Min(6, Math.Max(1, (int)Math.Ceiling(query.Length * 0.5)));
-// Adaptive threshold based on input length for optimal accuracy
+Run the executable:
 
-📊 Performance
-Metric	Result
-Speech Recognition Accuracy	>85% (Greek/English)
-File Load Time	<2s (100k rows)
-Voice Processing	<3s (10s audio)
-Memory Usage	<1GB typical
-🚧 Future Enhancements
+Windows: Speech2Sheet.exe
 
-    Mobile App Version (Android/iOS)
+Linux: ./Speech2Sheet.x86_64
 
-    Cloud Storage Integration (Google Drive, OneDrive)
+🚀 How to Use
 
-    Advanced Analytics Dashboard
+Open File: Click Open Excel File and select your grading spreadsheet.
 
-    Multi-worksheet Support
+Start Recording: Click Start Recording.
 
-    Additional Language Support
+Find Student: Speak the Student ID (e.g., "3120052") or Name (e.g., "Karkalas").
 
-🤝 Contributing
+The system will display a list of matching students based on fuzzy logic.
 
-Contributions are welcome! Please feel free to submit pull requests or open issues for:
+Select Entry: Click on the correct student from the results list.
 
-    Bug fixes
+Dictate Grade: Speak the grade (e.g., "Eight point five" or "Οκτώ μισό").
 
-    New features
+The system automatically parses the number and updates the cell.
 
-    Additional language support
+Save: Click Save to write changes to disk (or enable Auto-Save).
 
-    Performance improvements
+⚙ Settings
 
-📜 License
+Click the Settings button to configure:
 
-This project is licensed under the MIT License - see the LICENSE file for details.
-📚 Academic Reference
+Language: Toggle between English and Greek flags.
 
-If you use this software in academic work, please cite:
-bibtex
+Column Mapping: Map which columns in your Excel file correspond to ID, Name, and Grade.
 
-@thesis{karkalas2025speak2sheet,
-  title={Voice-based Grading Interface},
-  author={Karkalas, Ioannis},
-  year={2025},
-  institution={University of Thessaly},
-  url={https://ir.lib.uth.gr/handle/11615/86513}
-}
+Visible Columns: Toggle which columns should be visible in the UI grid.
 
-👨‍💻 Author
+AI Model: Swap the Whisper model (e.g., tiny, base, medium) to balance speed vs. accuracy.
 
-Ioannis Karkalas
+Auto-Save: Toggle automatic saving after every change.
 
-    GitHub: @retr0sity
+🎓 Academic Details
 
-    Thesis: University of Thessaly Institutional Repository
+This software was developed as a Bachelor Thesis.
+
+Thesis Title: Voice-based Grading Interface (Φωνητική Διεπαφή Καταχώρισης Βαθμολογιών)
+
+Full Thesis: University of Thessaly Institutional Repository
+
+Author: Ioannis Karkalas
+
+Supervisor: Fotios Kokkoras, Assistant Professor
+
+Institution: University of Thessaly, School of Technology, Digital Systems Department
+
+Date: June 2025
+
+This project is for educational and academic purposes.
