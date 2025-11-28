@@ -1,161 +1,200 @@
-Speech2Sheet: Voice-Based Grading Interface
+```markdown
+# Speech2Sheet – Voice-Based Grading Interface
 
-Speech2Sheet is a cross-platform tool developed to streamline the academic grading process. It combines offline speech recognition (OpenAI Whisper) with direct Excel file manipulation to reduce the time and administrative burden of manual grade entry.
+A cross-platform (Windows/Linux) application that enables **voice-controlled grading** using **offline speech recognition** and **direct Excel file manipulation**.  
+This project was developed as part of my **Bachelor Thesis** in the Digital Systems Department, University of Thessaly.
 
-This application was developed as part of a Bachelor Thesis at the University of Thessaly, Department of Digital Systems.
+📄 **Official Thesis PDF:**  
+https://ir.lib.uth.gr/xmlui/bitstream/handle/11615/86513/32043.pdf?sequence=4
 
-📖 Table of Contents
+---
 
-About the Project
+## 📌 Overview
 
-Key Features
+**Speech2Sheet** allows educators to record grades using only their voice—without internet access—while automatically updating Excel spreadsheets.  
+The system aims to reduce grading time, minimize human errors, and provide an accessible workflow for educators managing large student datasets.
 
-System Architecture
+The application supports:
 
-Installation
+- Offline speech recognition (Greek & English)
+- Real-time Excel editing inside Unity
+- Automatic saving & undo history
+- Student matching using approximate string matching (Levenshtein)
+- Unity-based dynamic grid UI
+- Cross-platform builds (Windows & Linux)
 
-How to Use
+---
 
-Settings
+## ✨ Features
 
-Academic Details
+- 🎤 **Offline Speech-to-Text** using Whisper.cpp  
+- 🇬🇷🇬🇧 **Bilingual Input & Interface** (Greek + English)  
+- 📊 **Live Excel Grid** generated dynamically  
+- 🔎 **Approximate student search** using Levenshtein distance  
+- 📝 **Voice-controlled grade entry**  
+- ↩️ **Undo stack** for safe editing  
+- 💾 **Auto-Save + Manual Save** options  
+- 📁 **Built-in file browser** (Excel + Whisper model selection)  
+- 🖥️ **Works on Windows & Linux**  
 
-🧐 About the Project
+---
 
-Traditional grading involves repetitive manual data entry into spreadsheets or web forms, a process prone to errors and time-consuming for educators. Speech2Sheet offers a unified workspace where instructors can:
+## 🛠️ Technologies Used
 
-Dictate student names or IDs to find them in a list.
+| Component | Technology |
+|----------|------------|
+| Engine | Unity 6000.0.48f1 LTS |
+| Speech Recognition | Whisper.cpp |
+| Excel Reading | ExcelDataReader |
+| Excel Writing | NPOI |
+| UI Framework | UI Toolkit, UGUI, TextMeshPro |
+| File Dialog | Simple File Browser |
+| String Matching | Levenshtein Distance |
+| Language Support | Unity Localization |
+| Programming Language | C# |
 
-Dictate grades (integers or decimals).
+---
 
-Edit spreadsheets in real-time without needing Microsoft Office installed.
+## 📦 Installation
 
-The system runs entirely offline, ensuring data privacy and usability in environments without stable internet access.
+### 1. Download the Latest Release
 
-✨ Key Features
+Download the current executable build from the GitHub Releases page:
 
-🎙️ Offline Speech Recognition: Powered by Whisper.cpp (OpenAI Whisper), supporting both English and Greek.
+👉 **[Download Latest Release](PUT_YOUR_RELEASE_LINK_HERE)**
 
-📊 Direct Excel Manipulation: Reads and writes .xls and .xlsx files directly using NPOI and ExcelDataReader. No MS Office installation required.
+### 2. Extract the Folder
 
-🔍 Fuzzy Search: Uses Levenshtein distance algorithms to find students even if the pronunciation isn't perfect (Approximate String Matching).
+Unzip the downloaded `.zip` file.
 
-⚡ Dynamic Grid: View and edit specific columns (ID, Name, Grade) in a responsive UI.
+### 3. Run the Application
 
-🛡️ Safety Features: Includes an Undo Stack and configurable Auto-Save.
+**Windows:**  
+Run `Speech2Sheet.exe`
 
-🌍 Bilingual UI: Fully localized interface with instant switching between English and Greek.
+**Linux:**  
+```bash
+chmod +x Speech2Sheet.x86_64
+./Speech2Sheet.x86_64
+```
 
-🛠 System Architecture
+No installation required.  
+No internet connection required.
 
-The application is built using a modular architecture within the Unity Engine (LTS 6000.0.48f1).
+---
 
-Component
+## 🚀 Usage Guide
 
-Technology
+### 1. Open Excel File
 
-Purpose
+Load an `.xls` or `.xlsx` file containing:
+- Student IDs  
+- Names  
+- Grades  
 
-Core Engine
+The grid will appear automatically.
 
-Unity
+---
 
-UI Toolkit, Cross-platform build target.
+### 2. Configure Columns
 
-ASR Engine
+In **Settings**, choose:
+- Which column is Student ID  
+- Which column is Name  
+- Which column is Grade  
+- Which columns you want displayed in the grid  
 
-Whisper.cpp
+---
 
-Native C++ plugin for offline, high-performance speech-to-text.
+### 3. Load Whisper Model
 
-Data I/O
+Select a `.bin` Whisper model such as:
+- `tiny.bin`
+- `base.bin`
+- `medium.bin`
 
-ExcelDataReader
+Heavier models provide better accuracy.
 
-Fast, stream-based reading of Excel files.
+---
 
-Data Manipulation
+### 4. Start Voice Recording
 
-NPOI
+Press **Start Recording** to:
+- Identify a student (e.g., “Παπαδόπουλος” or “3120052”)
+- Dictate a grade (e.g., “επτά κόμμα πέντε” → 7.5)
 
-Writing and saving changes to .xls/.xlsx files.
+The system will:
+1. Transcribe your speech  
+2. Match the student using approximate string matching  
+3. Insert the grade into the Excel grid  
 
-UI/UX
+---
 
-Unity UI / TMP
+### 5. Saving
 
-Dynamic grid generation and responsive layout.
+- Use **Save** to write the updated file back to disk  
+- Or enable **Auto-Save** to save automatically after every change  
 
-📥 Installation
+---
 
-Pre-requisites
+## 🧠 System Architecture
 
-Windows: Windows 10 or 11 (64-bit).
+The application is built with a modular design.
 
-Linux: A standard 64-bit distribution.
+### Core Modules
 
-Microphone: A functional input device.
+- **ExcelLoader**  
+  Handles reading, displaying, updating, and saving Excel files.
 
-Steps
+- **SpeechToTextManager**  
+  Handles microphone recording, Whisper CLI execution, regex parsing, token processing, and number extraction.
 
-Go to the [suspicious link removed] page.
+- **ColumnSettingsUIManager**  
+  Manages dropdowns/toggles for choosing ID/Name/Grade columns.
 
-Download the .zip file corresponding to your operating system.
+- **AutoSaveController**  
+  Triggers automatic saving after grid modifications.
 
-Extract the archive.
+- **LanguageToggle**  
+  Switches between English and Greek through Unity Localization.
 
-Run the executable:
+### Algorithms Used
 
-Windows: Speech2Sheet.exe
+- Regex parsing  
+- Word-to-number mapping (Greek & English)  
+- Levenshtein distance for approximate name/ID matching  
+- Dynamic thresholding for fuzzy search  
+- Grid-building with prefabs  
 
-Linux: ./Speech2Sheet.x86_64
+---
 
-🚀 How to Use
+## 📚 Thesis Reference
 
-Open File: Click Open Excel File and select your grading spreadsheet.
+This repository is based on the bachelor thesis:
 
-Start Recording: Click Start Recording.
+**“Φωνητική Διεπαφή Καταχώρισης Βαθμολογιών – Voice-Based Grading Interface”**  
+University of Thessaly, 2025  
 
-Find Student: Speak the Student ID (e.g., "3120052") or Name (e.g., "Karkalas").
+📄 PDF Link:  
+https://ir.lib.uth.gr/xmlui/bitstream/handle/11615/86513/32043.pdf?sequence=4
 
-The system will display a list of matching students based on fuzzy logic.
+---
 
-Select Entry: Click on the correct student from the results list.
+## 🤝 Acknowledgements
 
-Dictate Grade: Speak the grade (e.g., "Eight point five" or "Οκτώ μισό").
+- Supervisor: **Fotios Kokkoras**, Assistant Professor  
+- University of Thessaly — Digital Systems Department  
 
-The system automatically parses the number and updates the cell.
+---
 
-Save: Click Save to write changes to disk (or enable Auto-Save).
+## 📜 License
 
-⚙ Settings
+Released under the **MIT License**.
 
-Click the Settings button to configure:
+---
 
-Language: Toggle between English and Greek flags.
+## 📬 Contact
 
-Column Mapping: Map which columns in your Excel file correspond to ID, Name, and Grade.
-
-Visible Columns: Toggle which columns should be visible in the UI grid.
-
-AI Model: Swap the Whisper model (e.g., tiny, base, medium) to balance speed vs. accuracy.
-
-Auto-Save: Toggle automatic saving after every change.
-
-🎓 Academic Details
-
-This software was developed as a Bachelor Thesis.
-
-Thesis Title: Voice-based Grading Interface (Φωνητική Διεπαφή Καταχώρισης Βαθμολογιών)
-
-Full Thesis: University of Thessaly Institutional Repository
-
-Author: Ioannis Karkalas
-
-Supervisor: Fotios Kokkoras, Assistant Professor
-
-Institution: University of Thessaly, School of Technology, Digital Systems Department
-
-Date: June 2025
-
-This project is for educational and academic purposes.
+**Developer:** Ioannis Karkalas  
+For questions or suggestions, please open an Issue on GitHub.
+```
