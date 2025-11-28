@@ -1,4 +1,3 @@
-```markdown
 # Speech2Sheet – Voice-Based Grading Interface
 
 A cross-platform (Windows/Linux) application that enables **voice-controlled grading** using **offline speech recognition** and **direct Excel file manipulation**.  
@@ -197,4 +196,3 @@ Released under the **MIT License**.
 
 **Developer:** Ioannis Karkalas  
 For questions or suggestions, please open an Issue on GitHub.
-```
