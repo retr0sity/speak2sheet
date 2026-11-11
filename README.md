@@ -4,7 +4,7 @@ A cross-platform (Windows/Linux) application that enables **voice-controlled gra
 This project was developed as part of my **Bachelor Thesis** in the Digital Systems Department, University of Thessaly.
 
 📄 **Official Thesis PDF:**  
-https://ir.lib.uth.gr/xmlui/bitstream/handle/11615/86513/32043.pdf?sequence=4
+[https://ir.lib.uth.gr/xmlui/bitstream/handle/11615/86513/32043.pdf?sequence=4](http://ir.lib.uth.gr/xmlui/bitstream/handle/11615/86513/32043.pdf?sequence=4&isAllowed=y)
 
 ---
 
